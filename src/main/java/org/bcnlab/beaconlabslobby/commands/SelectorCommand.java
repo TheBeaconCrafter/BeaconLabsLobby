@@ -2,12 +2,15 @@ package org.bcnlab.beaconlabslobby.commands;
 
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
+import net.md_5.bungee.api.ChatColor;
 import org.bcnlab.beaconlabslobby.BeaconLabsLobby;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -56,35 +59,58 @@ public class SelectorCommand implements CommandExecutor, Listener {
         public ServerSelectorGUI(Player player) {
             this.inventory = Bukkit.createInventory(this, 27, "Server Selector");
 
-            // Example server items
-            ItemStack serverItem1 = createServerItem("Server 1", Material.DIAMOND);
-            ItemStack serverItem2 = createServerItem("knockbackffa", Material.GOLD_INGOT);
-            ItemStack serverItem3 = createServerItem("Server 3", Material.IRON_INGOT);
+            // Load server items from config
+            loadServerItems();
+        }
 
-            // Add items to GUI
-            inventory.setItem(11, serverItem1);
-            inventory.setItem(13, serverItem2);
-            inventory.setItem(15, serverItem3);
+        private void loadServerItems() {
+            FileConfiguration config = plugin.getConfig();
+            ConfigurationSection itemsSection = config.getConfigurationSection("items.server-selector");
+
+            if (itemsSection == null) {
+                plugin.getLogger().warning("No server selector items found in the config!");
+                return;
+            }
+
+            for (String key : itemsSection.getKeys(false)) {
+                ConfigurationSection itemSection = itemsSection.getConfigurationSection(key);
+                if (itemSection == null) continue;
+
+                String name = itemSection.getString("name");
+                Material type = Material.matchMaterial(itemSection.getString("type", "COMPASS"));
+                List<String> lore = itemSection.getStringList("lore");
+                int slot = itemSection.getInt("slot", -1);
+                String serverIdentifier = key; // This is the identifier in the config, e.g., "lobby", "knockbackffa"
+                String serverName = itemSection.getString("server"); // This is the server name to connect to
+
+                if (name == null || type == null || slot == -1 || serverIdentifier == null || serverName == null) {
+                    plugin.getLogger().warning("Invalid configuration for server selector item: " + key);
+                    continue;
+                }
+
+                ItemStack item = new ItemStack(type);
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
+
+                    // Apply color codes and formatting to lore
+                    List<String> formattedLore = new ArrayList<>();
+                    for (String line : lore) {
+                        formattedLore.add(ChatColor.translateAlternateColorCodes('&', line));
+                    }
+                    meta.setLore(formattedLore);
+
+                    item.setItemMeta(meta);
+                }
+
+                inventory.setItem(slot, item);
+            }
         }
 
         @Override
         public Inventory getInventory() {
             return inventory;
         }
-    }
-
-    // Method to create server items
-    private ItemStack createServerItem(String serverName, Material material) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(serverName);
-            List<String> lore = new ArrayList<>();
-            lore.add("Click to join " + serverName);
-            meta.setLore(lore);
-            item.setItemMeta(meta);
-        }
-        return item;
     }
 
     // Handle inventory click events
@@ -100,7 +126,19 @@ public class SelectorCommand implements CommandExecutor, Listener {
         ItemStack clickedItem = event.getCurrentItem();
         if (clickedItem != null && clickedItem.getType() != Material.AIR) {
             Player player = (Player) event.getWhoClicked();
-            String serverName = clickedItem.getItemMeta().getDisplayName(); // Assuming display name is the server name
+            ItemMeta meta = clickedItem.getItemMeta();
+            if (meta == null || !meta.hasDisplayName()) {
+                return;
+            }
+
+            // Fetch server name from configuration based on item identifier
+            String serverIdentifier = getServerIdentifier(clickedItem);
+            String serverName = plugin.getConfig().getString("items.server-selector." + serverIdentifier + ".server");
+
+            if (serverName == null) {
+                plugin.getLogger().warning("Server name not found for item: " + serverIdentifier);
+                return;
+            }
 
             // Example: Send the player to another server using BungeeCord
             sendPlayerToServer(player, serverName);
@@ -110,9 +148,38 @@ public class SelectorCommand implements CommandExecutor, Listener {
         }
     }
 
+    // Helper method to get server identifier from clicked item
+    private String getServerIdentifier(ItemStack item) {
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null || !meta.hasDisplayName()) {
+            return null;
+        }
+
+        String displayName = meta.getDisplayName();
+        FileConfiguration config = plugin.getConfig();
+        ConfigurationSection itemsSection = config.getConfigurationSection("items.server-selector");
+
+        if (itemsSection == null) {
+            return null;
+        }
+
+        for (String key : itemsSection.getKeys(false)) {
+            ConfigurationSection itemSection = itemsSection.getConfigurationSection(key);
+            if (itemSection == null) continue;
+
+            String name = itemSection.getString("name");
+            if (name != null && ChatColor.translateAlternateColorCodes('&', name).equals(displayName)) {
+                return key;
+            }
+        }
+
+        return null;
+    }
+
     // Method to send the player to another server using BungeeCord
     private void sendPlayerToServer(Player player, String serverName) {
-        plugin.getLogger().info("Connecting player to server");
+        plugin.getLogger().info("Connecting player to server: " + serverName);
+        player.sendMessage(plugin.getPrefix() + "§cYou are being connected to §6" + serverName);
 
         // Send player to another server
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
@@ -125,16 +192,9 @@ public class SelectorCommand implements CommandExecutor, Listener {
     // Handle inventory close events
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        Inventory inventory = event.getInventory();
-        InventoryHolder holder = inventory.getHolder();
-
-        if (holder instanceof ServerSelectorGUI) {
+        if (event.getInventory().getHolder() instanceof ServerSelectorGUI) {
             Player player = (Player) event.getPlayer();
-            player.sendMessage("You closed the server selector GUI.");
-            plugin.getLogger().info("Holder is Server Selector");
-        } else {
-            plugin.getLogger().info("Holder is NOT Server Selector");
+            plugin.getLogger().info("Player closed the Server Selector GUI.");
         }
     }
-
 }

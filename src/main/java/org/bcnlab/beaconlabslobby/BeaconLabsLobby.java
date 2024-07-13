@@ -1,7 +1,6 @@
 package org.bcnlab.beaconlabslobby;
 
 import org.bcnlab.beaconlabslobby.commands.SelectorCommand;
-import org.bcnlab.beaconlabslobby.gui.ServerSelectorGUI;
 import org.bcnlab.beaconlabslobby.listeners.PlayerJoinListener;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -14,6 +13,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageListener {
@@ -34,7 +34,6 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
 
         // Register events
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
-        getServer().getPluginManager().registerEvents(new ServerSelectorGUI(this), this);
 
         getCommand("selector").setExecutor(new SelectorCommand(this));
 
@@ -62,17 +61,38 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
 
         // Set default values for server selector item
         if (!config.contains("items.server-selector")) {
-            config.set("items.server-selector.name", "Server Selector");
-            config.set("items.server-selector.type", Material.COMPASS.toString());
+            config.set("items.server-selector", new ArrayList<>());
 
-            List<String> lore = new ArrayList<>();
-            lore.add("Right-click to select a server");
-            lore.add("Use this to navigate between servers");
-            config.set("items.server-selector.lore", lore);
+            // Default item configuration
+            ConfigurationSection defaultItem = config.createSection("items.server-selector.default");
+            defaultItem.set("name", "Server Selector");
+            defaultItem.set("type", Material.COMPASS.toString());
+            defaultItem.set("lore", Arrays.asList("Right-click to select a server", "Use this to navigate between servers"));
+            defaultItem.set("slot", 11);
+            defaultItem.set("server", "default_server_name");
+
+            // Additional server selector items
+            ConfigurationSection item1 = config.createSection("items.server-selector.item1");
+            item1.set("name", "Server 1");
+            item1.set("type", Material.DIAMOND.toString());
+            item1.set("lore", Arrays.asList("&7Click to join Server 1", "&eThis is a lore line for Server 1"));
+            item1.set("slot", 13);
+            item1.set("server", "server1");
+
+            ConfigurationSection item2 = config.createSection("items.server-selector.item2");
+            item2.set("name", "Server 2");
+            item2.set("type", Material.GOLD_INGOT.toString());
+            item2.set("lore", Arrays.asList("&7Click to join Server 2", "&eThis is a lore line for Server 2"));
+            item2.set("slot", 15);
+            item2.set("server", "server2");
+
+            // Add more items as needed
         }
 
+        // Save the updated configuration
         saveConfig();
     }
+
 
     // Method to load the configuration
     private void loadConfig() {

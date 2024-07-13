@@ -36,8 +36,6 @@ public class PlayerJoinListener implements Listener {
         // Give configurable items on join
         giveServerSelectorItem(player);
         // Add more items if needed
-
-        player.sendMessage(plugin.getPrefix() + "Welcome to the server!");
     }
 
     private void clearInventory(Player player) {
