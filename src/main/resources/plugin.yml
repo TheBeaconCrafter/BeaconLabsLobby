@@ -1,0 +1,11 @@
+name: BeaconLabsLobby
+author: ItsBeacon
+version: '${project.version}'
+main: org.bcnlab.beaconlabslobby.BeaconLabsLobby
+api-version: '1.21'
+channels:
+  - BungeeCord
+commands:
+  selector:
+    usage: /selector
+    description: Opens the server selector
