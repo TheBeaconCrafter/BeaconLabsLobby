@@ -2,6 +2,7 @@ package org.bcnlab.beaconlabslobby.commands;
 
 import org.bcnlab.beaconlabslobby.BeaconLabsLobby;
 import org.bcnlab.beaconlabslobby.managers.BuildManager;
+import org.bukkit.GameMode;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -47,10 +48,12 @@ public class BuildCommand implements CommandExecutor {
                 UUID targetUUID = target.getUniqueId();
                 if(buildManager.isAllowedToBuild(targetUUID)) {
                     buildManager.disallowBuilding(targetUUID);
+                    target.setGameMode(GameMode.ADVENTURE);
                     player.sendMessage(plugin.getPrefix() + "§cYou disallowed " + target.getName() + " to build.");
                     target.sendMessage(plugin.getPrefix() + "§cYou are no longer allowed to build.");
                 } else {
                     buildManager.allowBuilding(targetUUID);
+                    target.setGameMode(GameMode.CREATIVE);
                     player.sendMessage(plugin.getPrefix() + "§aYou allowed " + target.getName() + " to build.");
                     target.sendMessage(plugin.getPrefix() + "§aYou are now allowed to build.");
                 }
@@ -67,9 +70,11 @@ public class BuildCommand implements CommandExecutor {
             // Toggle self build status
             if (buildManager.isAllowedToBuild(playerUUID)) {
                 buildManager.disallowBuilding(playerUUID);
+                player.setGameMode(GameMode.ADVENTURE);
                 player.sendMessage(plugin.getPrefix() + "§cBuilding is now disabled for yourself.");
             } else {
                 buildManager.allowBuilding(playerUUID);
+                player.setGameMode(GameMode.CREATIVE);
                 player.sendMessage(plugin.getPrefix() + "§aBuilding is now enabled for yourself.");
             }
         }
