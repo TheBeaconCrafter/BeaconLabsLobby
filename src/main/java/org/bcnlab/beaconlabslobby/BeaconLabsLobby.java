@@ -1,8 +1,12 @@
 package org.bcnlab.beaconlabslobby;
 
-import org.bcnlab.beaconlabslobby.commands.SelectorCommand;
+import org.bcnlab.beaconlabslobby.commands.*;
+import org.bcnlab.beaconlabslobby.listeners.BuildListener;
+import org.bcnlab.beaconlabslobby.listeners.LobbyProtectionListener;
 import org.bcnlab.beaconlabslobby.listeners.PlayerJoinListener;
+import org.bcnlab.beaconlabslobby.managers.BuildManager;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -21,6 +25,8 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
     private String pluginPrefix;
     private String pluginVersion = "1.0";
     private String noPermsMessage = "&cYou do not have permission to use this command.";
+    private BuildManager buildManager;
+    private Location spawnLocation;
 
     @Override
     public void onEnable() {
@@ -29,13 +35,24 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         // Load the configuration
         loadConfig();
 
+        // Initialize BuildManager
+        buildManager = new BuildManager();
+
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
         getServer().getMessenger().registerIncomingPluginChannel(this, "BungeeCord", this);
 
         // Register events
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
+        getServer().getPluginManager().registerEvents(new LobbyProtectionListener(this), this);
+
+        BuildListener buildListener = new BuildListener(this, buildManager);
+        getServer().getPluginManager().registerEvents(buildListener, this);
 
         getCommand("selector").setExecutor(new SelectorCommand(this));
+        getCommand("labslobby").setExecutor(new LabsLobbyCommand(this));
+        getCommand("build").setExecutor(new BuildCommand(this, buildManager));
+        getCommand("spawn").setExecutor(new SpawnCommand(this));
+        getCommand("setspawn").setExecutor(new SetSpawnCommand(this));
 
         getLogger().info("BeaconLabs Lobby was enabled!");
     }
@@ -58,6 +75,9 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         FileConfiguration config = getConfig();
         config.options().copyDefaults(true);
         config.addDefault("plugin-prefix", "&6BeaconLabs &8» ");
+        config.addDefault("disable-damage", true);
+        config.addDefault("disable-mob-spawning", true);
+        config.addDefault("disable-food-level-change", true);
 
         // Set default values for server selector item
         if (!config.contains("items.server-selector")) {
@@ -94,12 +114,63 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
     }
 
 
-    // Method to load the configuration
     private void loadConfig() {
         FileConfiguration config = getConfig();
 
         // Load plugin prefix from config
         pluginPrefix = config.getString("plugin-prefix", "&6BeaconLabs &8» ");
+
+        if (config.contains("spawn")) {
+            this.spawnLocation = deserializeLocation(config.getString("spawn"));
+        } else {
+            getLogger().warning("Config does not contain a 'spawn' section.");
+        }
+    }
+
+
+    public Location getSpawnLocation() {
+        return spawnLocation;
+    }
+
+    public void setSpawnLocation(Location spawnLocation) {
+        this.spawnLocation = spawnLocation;
+    }
+
+    public void loadSpawnLocation() {
+        if (getConfig().contains("spawn")) {
+            this.spawnLocation = deserializeLocation(getConfig().getString("spawn"));
+        }
+    }
+
+    public void saveSpawnLocation() {
+        if (spawnLocation != null) {
+            getConfig().set("spawn", serializeLocation(spawnLocation));
+            saveConfig();
+        }
+    }
+
+    public String serializeLocation(Location location) {
+        if (location == null) return null;
+        return location.getWorld().getName() + "," +
+                location.getX() + "," +
+                location.getY() + "," +
+                location.getZ() + "," +
+                location.getYaw() + "," +
+                location.getPitch();
+    }
+
+    public Location deserializeLocation(String serialized) {
+        if (serialized == null || serialized.isEmpty()) return null;
+        String[] parts = serialized.split(",");
+        if (parts.length == 6) {
+            return new Location(getServer().getWorld(parts[0]),
+                    Double.parseDouble(parts[1]),
+                    Double.parseDouble(parts[2]),
+                    Double.parseDouble(parts[3]),
+                    Float.parseFloat(parts[4]),
+                    Float.parseFloat(parts[5]));
+        }
+        return null;
     }
 
     @Override

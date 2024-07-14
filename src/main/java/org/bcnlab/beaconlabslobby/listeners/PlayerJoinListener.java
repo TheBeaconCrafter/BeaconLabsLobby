@@ -1,6 +1,7 @@
 package org.bcnlab.beaconlabslobby.listeners;
 
 import org.bcnlab.beaconlabslobby.BeaconLabsLobby;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -36,6 +37,23 @@ public class PlayerJoinListener implements Listener {
         // Give configurable items on join
         giveServerSelectorItem(player);
         // Add more items if needed
+
+        // Teleport player to spawn
+        teleportPlayerToSpawn(player);
+    }
+
+    private void teleportPlayerToSpawn(Player player) {
+        try {
+            Location spawnLocation = plugin.getSpawnLocation();
+            if (spawnLocation != null) {
+                player.teleport(spawnLocation);
+            } else {
+                plugin.getLogger().warning("Spawn location is not set.");
+            }
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to teleport player " + player.getName() + " to spawn:");
+            e.printStackTrace();
+        }
     }
 
     private void clearInventory(Player player) {
@@ -44,8 +62,6 @@ public class PlayerJoinListener implements Listener {
 
     private void giveServerSelectorItem(Player player) {
         FileConfiguration config = plugin.getConfig();
-
-        plugin.getLogger().info("A player should now get the item");
 
         // Check if the configuration section for items exists
         if (config.contains("items.server-selector")) {

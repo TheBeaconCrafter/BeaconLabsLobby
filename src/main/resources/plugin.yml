@@ -9,3 +9,15 @@ commands:
   selector:
     usage: /selector
     description: Opens the server selector
+  labslobby:
+    usage: /labslobby
+    description: Returns info about the plugin
+  build:
+    usage: /build
+    description: Allows you to build
+  spawn:
+    usage: /spawn
+    description: Teleports the sender to spawn
+  setspawn:
+    usage: /setspawn
+    description: Sets the spawn for the lobby
