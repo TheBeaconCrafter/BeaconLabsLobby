@@ -30,8 +30,6 @@ public class PlayerJoinListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
-        plugin.getLogger().info("Player joined");
-
         // Clear player's inventory
         clearInventory(player);
 
@@ -73,6 +71,7 @@ public class PlayerJoinListener implements Listener {
             itemName = ChatColor.translateAlternateColorCodes('&', itemName);
             Material itemType = Material.valueOf(itemConfig.getString("type", "COMPASS"));
             List<String> itemLore = itemConfig.getStringList("lore");
+            int itemSlot = itemConfig.getInt("slot", 0);
 
             // Create the item stack
             ItemStack item = new ItemStack(itemType);
@@ -90,7 +89,7 @@ public class PlayerJoinListener implements Listener {
             }
 
             // Give the item to the player
-            player.getInventory().addItem(item);
+            player.getInventory().setItem(itemSlot, item);
         } else {
             plugin.getLogger().warning("Configuration for server selector item not found!");
         }
@@ -119,8 +118,6 @@ public class PlayerJoinListener implements Listener {
                     expectedName = ChatColor.translateAlternateColorCodes('&', expectedName); // Translate color codes
                     String displayName = meta.getDisplayName();
                     displayName = ChatColor.translateAlternateColorCodes('&', displayName); // Translate color codes
-                    plugin.getLogger().info("Expected name: " + expectedName);
-                    plugin.getLogger().info("Actual display name: " + displayName);
                     return displayName.equals(expectedName);
                 }
             }
