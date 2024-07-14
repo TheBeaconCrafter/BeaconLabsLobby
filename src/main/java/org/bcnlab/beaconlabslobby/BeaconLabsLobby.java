@@ -5,6 +5,7 @@ import org.bcnlab.beaconlabslobby.listeners.BuildListener;
 import org.bcnlab.beaconlabslobby.listeners.LobbyProtectionListener;
 import org.bcnlab.beaconlabslobby.listeners.PlayerJoinListener;
 import org.bcnlab.beaconlabslobby.managers.BuildManager;
+import org.bcnlab.beaconlabslobby.managers.InventoryListener;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -44,6 +45,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         // Register events
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
         getServer().getPluginManager().registerEvents(new LobbyProtectionListener(this), this);
+        getServer().getPluginManager().registerEvents(new InventoryListener(buildManager), this);
 
         BuildListener buildListener = new BuildListener(this, buildManager);
         getServer().getPluginManager().registerEvents(buildListener, this);
