@@ -1,6 +1,7 @@
 package org.bcnlab.beaconlabslobby.listeners;
 
 import org.bcnlab.beaconlabslobby.BeaconLabsLobby;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -64,11 +65,12 @@ public class PlayerJoinListener implements Listener {
         FileConfiguration config = plugin.getConfig();
 
         // Check if the configuration section for items exists
-        if (config.contains("items.server-selector")) {
-            ConfigurationSection itemConfig = config.getConfigurationSection("items.server-selector");
+        if (config.contains("server-selector.items")) {
+            ConfigurationSection itemConfig = config.getConfigurationSection("server-selector.settings");
 
             // Get item details from configuration
             String itemName = itemConfig.getString("name", "Server Selector");
+            itemName = ChatColor.translateAlternateColorCodes('&', itemName);
             Material itemType = Material.valueOf(itemConfig.getString("type", "COMPASS"));
             List<String> itemLore = itemConfig.getStringList("lore");
 
@@ -76,11 +78,12 @@ public class PlayerJoinListener implements Listener {
             ItemStack item = new ItemStack(itemType);
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName(plugin.getPrefix() + itemName);
+                meta.setDisplayName(itemName);
                 // Translate lore color codes
                 List<String> translatedLore = new ArrayList<>();
                 for (String line : itemLore) {
-                    translatedLore.add(plugin.getPrefix() + line);
+                    String lore_color = ChatColor.translateAlternateColorCodes('&', line);
+                    translatedLore.add(lore_color);
                 }
                 meta.setLore(translatedLore);
                 item.setItemMeta(meta);
@@ -106,14 +109,19 @@ public class PlayerJoinListener implements Listener {
 
     private boolean isServerSelectorItem(ItemStack item) {
         FileConfiguration config = plugin.getConfig();
-        if (config.contains("items.server-selector")) {
-            String itemType = config.getString("items.server-selector.type", "COMPASS");
+        if (config.contains("server-selector.settings")) {
+            String itemType = config.getString("server-selector.settings.type", "COMPASS");
             Material expectedType = Material.matchMaterial(itemType);
             if (expectedType != null && item.getType() == expectedType) {
                 ItemMeta meta = item.getItemMeta();
                 if (meta != null) {
-                    String expectedName = plugin.getPrefix() + config.getString("items.server-selector.name", "Server Selector");
-                    return meta.hasDisplayName() && meta.getDisplayName().equals(expectedName);
+                    String expectedName = config.getString("server-selector.settings.name", "Server Selector");
+                    expectedName = ChatColor.translateAlternateColorCodes('&', expectedName); // Translate color codes
+                    String displayName = meta.getDisplayName();
+                    displayName = ChatColor.translateAlternateColorCodes('&', displayName); // Translate color codes
+                    plugin.getLogger().info("Expected name: " + expectedName);
+                    plugin.getLogger().info("Actual display name: " + displayName);
+                    return displayName.equals(expectedName);
                 }
             }
         }

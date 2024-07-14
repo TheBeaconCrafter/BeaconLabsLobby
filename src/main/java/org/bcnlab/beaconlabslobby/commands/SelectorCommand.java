@@ -65,7 +65,7 @@ public class SelectorCommand implements CommandExecutor, Listener {
 
         private void loadServerItems() {
             FileConfiguration config = plugin.getConfig();
-            ConfigurationSection itemsSection = config.getConfigurationSection("items.server-selector");
+            ConfigurationSection itemsSection = config.getConfigurationSection("server-selector.items");
 
             if (itemsSection == null) {
                 plugin.getLogger().warning("No server selector items found in the config!");
@@ -133,7 +133,7 @@ public class SelectorCommand implements CommandExecutor, Listener {
 
             // Fetch server name from configuration based on item identifier
             String serverIdentifier = getServerIdentifier(clickedItem);
-            String serverName = plugin.getConfig().getString("items.server-selector." + serverIdentifier + ".server");
+            String serverName = plugin.getConfig().getString("server-selector.items." + serverIdentifier + ".server");
 
             if (serverName == null) {
                 plugin.getLogger().warning("Server name not found for item: " + serverIdentifier);
@@ -157,7 +157,7 @@ public class SelectorCommand implements CommandExecutor, Listener {
 
         String displayName = meta.getDisplayName();
         FileConfiguration config = plugin.getConfig();
-        ConfigurationSection itemsSection = config.getConfigurationSection("items.server-selector");
+        ConfigurationSection itemsSection = config.getConfigurationSection("server-selector.items");
 
         if (itemsSection == null) {
             return null;

@@ -79,32 +79,40 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         config.addDefault("disable-mob-spawning", true);
         config.addDefault("disable-food-level-change", true);
 
+        if (!config.contains("server-selector.settings")) {
+            ConfigurationSection settingsSection = config.createSection("server-selector.settings");
+            settingsSection.set("name", "&6BeaconLabs &8» &4Server Selector");
+            settingsSection.set("type", Material.COMPASS.toString());
+            settingsSection.set("lore", Arrays.asList("&aLeft-click to select a server", "&4You can find all your favorite gamemodes here!"));
+            settingsSection.set("slot", 0);
+        }
+
         // Set default values for server selector item
-        if (!config.contains("items.server-selector")) {
-            config.set("items.server-selector", new ArrayList<>());
+        if (!config.contains("server-selector.items")) {
+            config.set("server-selector.items", new ArrayList<>());
 
             // Default item configuration
-            ConfigurationSection defaultItem = config.createSection("items.server-selector.default");
-            defaultItem.set("name", "Server Selector");
+            ConfigurationSection defaultItem = config.createSection("server-selector.items.server1");
+            defaultItem.set("name", "&2Server 1");
             defaultItem.set("type", Material.COMPASS.toString());
-            defaultItem.set("lore", Arrays.asList("Right-click to select a server", "Use this to navigate between servers"));
+            defaultItem.set("lore", Arrays.asList("Left-click to select a server", "&4You can even use color codes!"));
             defaultItem.set("slot", 11);
-            defaultItem.set("server", "default_server_name");
+            defaultItem.set("server", "server_in_bungeeconfig");
 
             // Additional server selector items
-            ConfigurationSection item1 = config.createSection("items.server-selector.item1");
-            item1.set("name", "Server 1");
+            ConfigurationSection item1 = config.createSection("server-selector.items.server3");
+            item1.set("name", "&6Server 2");
             item1.set("type", Material.DIAMOND.toString());
             item1.set("lore", Arrays.asList("&7Click to join Server 1", "&eThis is a lore line for Server 1"));
             item1.set("slot", 13);
-            item1.set("server", "server1");
+            item1.set("server", "server2");
 
-            ConfigurationSection item2 = config.createSection("items.server-selector.item2");
-            item2.set("name", "Server 2");
+            ConfigurationSection item2 = config.createSection("server-selector.items.server2");
+            item2.set("name", "&4Server 3");
             item2.set("type", Material.GOLD_INGOT.toString());
             item2.set("lore", Arrays.asList("&7Click to join Server 2", "&eThis is a lore line for Server 2"));
             item2.set("slot", 15);
-            item2.set("server", "server2");
+            item2.set("server", "server3");
 
             // Add more items as needed
         }
