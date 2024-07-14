@@ -56,6 +56,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         getCommand("spawn").setExecutor(new SpawnCommand(this));
         getCommand("setspawn").setExecutor(new SetSpawnCommand(this));
         getCommand("hider").setExecutor(new HiderCommand(this));
+        getCommand("refreshscoreboard").setExecutor(new RefreshScoreboardCommand(this));
 
         getLogger().info("BeaconLabs Lobby was enabled!");
     }

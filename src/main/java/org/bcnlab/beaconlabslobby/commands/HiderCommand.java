@@ -144,7 +144,6 @@ public class HiderCommand implements CommandExecutor, Listener {
     public void onInventoryClose(InventoryCloseEvent event) {
         if (event.getInventory().getHolder() instanceof HiderGUI) {
             Player player = (Player) event.getPlayer();
-            plugin.getLogger().info(player.getName() + " closed the Player Hider GUI.");
         }
     }
 }

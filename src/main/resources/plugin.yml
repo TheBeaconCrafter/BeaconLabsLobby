@@ -24,3 +24,7 @@ commands:
   hider:
     usage: /hider
     description: Opens a GUI to hide other players
+  refreshscoreboard:
+    usage: /refreshscoreboard
+    description: Refresh the scoreboard
+    aliases: [refreshsb, resb]

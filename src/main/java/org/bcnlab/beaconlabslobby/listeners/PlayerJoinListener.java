@@ -1,7 +1,9 @@
 package org.bcnlab.beaconlabslobby.listeners;
 
 import org.bcnlab.beaconlabslobby.BeaconLabsLobby;
+import org.bcnlab.beaconlabslobby.utils.ScoreboardUtil;
 import org.bukkit.ChatColor;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -30,16 +32,19 @@ public class PlayerJoinListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
-        // Clear player's inventory
+        teleportPlayerToSpawn(player);
+        player.setGameMode(GameMode.ADVENTURE);
+
         clearInventory(player);
 
         // Give configurable items on join
         giveServerSelectorItem(player);
         givePlayerHiderItem(player);
-        // Add more items if needed
 
-        // Teleport player to spawn
-        teleportPlayerToSpawn(player);
+        //Scoreboard
+        ScoreboardUtil scoreboardUtil = new ScoreboardUtil(player, plugin);
+        scoreboardUtil.updateScoreboard();
+        scoreboardUtil.setPlayerScoreboard();
     }
 
     private void teleportPlayerToSpawn(Player player) {
