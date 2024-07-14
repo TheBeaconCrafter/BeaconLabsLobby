@@ -86,6 +86,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
             settingsSection.set("name", "&6BeaconLabs &8» &4Server Selector");
             settingsSection.set("type", Material.COMPASS.toString());
             settingsSection.set("lore", Arrays.asList("&aLeft-click to select a server", "&4You can find all your favorite gamemodes here!"));
+            settingsSection.set("rows", 3);
             settingsSection.set("slot", 0);
         }
 

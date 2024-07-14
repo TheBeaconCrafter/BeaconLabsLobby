@@ -57,7 +57,15 @@ public class SelectorCommand implements CommandExecutor, Listener {
         private final Inventory inventory;
 
         public ServerSelectorGUI(Player player) {
-            this.inventory = Bukkit.createInventory(this, 27, "Server Selector");
+            // Fetch settings from config
+            FileConfiguration config = plugin.getConfig();
+            ConfigurationSection settings = config.getConfigurationSection("server-selector.settings");
+
+            // Determine number of rows and title from config
+            int rows = settings.getInt("rows", 3);
+
+            // Create inventory with specified rows and title
+            this.inventory = Bukkit.createInventory(this, rows * 9, "Server Selector");
 
             // Load server items from config
             loadServerItems();
@@ -194,7 +202,6 @@ public class SelectorCommand implements CommandExecutor, Listener {
     public void onInventoryClose(InventoryCloseEvent event) {
         if (event.getInventory().getHolder() instanceof ServerSelectorGUI) {
             Player player = (Player) event.getPlayer();
-            plugin.getLogger().info("Player closed the Server Selector GUI.");
         }
     }
 }
