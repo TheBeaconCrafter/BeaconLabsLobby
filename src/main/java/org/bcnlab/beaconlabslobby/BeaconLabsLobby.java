@@ -55,6 +55,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         getCommand("build").setExecutor(new BuildCommand(this, buildManager));
         getCommand("spawn").setExecutor(new SpawnCommand(this));
         getCommand("setspawn").setExecutor(new SetSpawnCommand(this));
+        getCommand("hider").setExecutor(new HiderCommand(this));
 
         getLogger().info("BeaconLabs Lobby was enabled!");
     }
@@ -87,7 +88,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
             settingsSection.set("type", Material.COMPASS.toString());
             settingsSection.set("lore", Arrays.asList("&aLeft-click to select a server", "&4You can find all your favorite gamemodes here!"));
             settingsSection.set("rows", 3);
-            settingsSection.set("slot", 0);
+            settingsSection.set("slot", 2);
         }
 
         // Set default values for server selector item
@@ -116,8 +117,15 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
             item2.set("lore", Arrays.asList("&7Click to join Server 2", "&eThis is a lore line for Server 2"));
             item2.set("slot", 15);
             item2.set("server", "server3");
+        }
 
-            // Add more items as needed
+        // Set default values for server selector item
+        if (!config.contains("player-hider.settings")) {
+            ConfigurationSection settingsSection = config.createSection("player-hider.settings");
+            settingsSection.set("name", "&6BeaconLabs &8» &aPlayer Hider");
+            settingsSection.set("type", Material.BLAZE_ROD.toString());
+            settingsSection.set("lore", Arrays.asList("&aLeft-click to hide players", "&4You can modify your player visibility settings here."));
+            settingsSection.set("slot", 6);
         }
 
         // Save the updated configuration

@@ -21,3 +21,6 @@ commands:
   setspawn:
     usage: /setspawn
     description: Sets the spawn for the lobby
+  hider:
+    usage: /hider
+    description: Opens a GUI to hide other players

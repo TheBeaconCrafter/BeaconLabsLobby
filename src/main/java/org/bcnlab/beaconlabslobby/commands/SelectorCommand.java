@@ -63,9 +63,11 @@ public class SelectorCommand implements CommandExecutor, Listener {
 
             // Determine number of rows and title from config
             int rows = settings.getInt("rows", 3);
+            String name = settings.getString("name", "Server Selector");
+            String final_name = ChatColor.translateAlternateColorCodes('&', name);
 
             // Create inventory with specified rows and title
-            this.inventory = Bukkit.createInventory(this, rows * 9, "Server Selector");
+            this.inventory = Bukkit.createInventory(this, rows * 9, final_name);
 
             // Load server items from config
             loadServerItems();
