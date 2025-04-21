@@ -12,6 +12,11 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.messaging.PluginMessageListener;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Monster;
+import org.bukkit.entity.Animals;
+import org.bukkit.entity.Ambient;
+import org.bukkit.entity.WaterMob;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,6 +48,16 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
 
         if (getConfig().getBoolean("disable-time", true)) {
             setDefaultTime();
+        }
+
+        if (getConfig().getBoolean("disable-mob-spawning", true)) {
+            for (World world : Bukkit.getWorlds()) {
+                for (Entity entity : world.getEntities()) {
+                    if (entity instanceof Monster || entity instanceof Animals || entity instanceof Ambient || entity instanceof WaterMob) {
+                        entity.remove();
+                    }
+                }
+            }
         }
 
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
