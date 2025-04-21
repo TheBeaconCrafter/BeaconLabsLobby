@@ -50,4 +50,18 @@ public class BuildListener implements Listener {
             }
         }
     }
+
+    @EventHandler
+    public void onItemDrop(org.bukkit.event.player.PlayerDropItemEvent event) {
+        if (!buildManager.isAllowedToBuild(event.getPlayer().getUniqueId())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onItemPickup(org.bukkit.event.player.PlayerPickupItemEvent event) {
+        if (!buildManager.isAllowedToBuild(event.getPlayer().getUniqueId())) {
+            event.setCancelled(true);
+        }
+    }
 }

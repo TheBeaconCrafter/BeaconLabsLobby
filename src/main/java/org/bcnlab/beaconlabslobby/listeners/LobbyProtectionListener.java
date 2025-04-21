@@ -1,12 +1,16 @@
 package org.bcnlab.beaconlabslobby.listeners;
 
 import org.bcnlab.beaconlabslobby.BeaconLabsLobby;
+import org.bukkit.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 
 public class LobbyProtectionListener implements Listener {
 
@@ -43,4 +47,27 @@ public class LobbyProtectionListener implements Listener {
             event.setCancelled(true);
         }
     }
+
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) {
+
+        if(!plugin.getReturnToSpawn()) {
+            return;
+        }
+
+        Player player = event.getPlayer();
+        Location spawn = plugin.getSpawnLocation();
+
+        if (event.getFrom().getY() == event.getTo().getY()) return;
+
+        double y = player.getLocation().getY();
+        if (y > 255) {
+            player.sendMessage(plugin.getPrefix() + ChatColor.YELLOW + "You are too high! Teleporting you down.");
+            player.teleport(spawn);
+        } else if (y < 10) {
+            player.teleport(spawn);
+            player.sendMessage(plugin.getPrefix() + ChatColor.YELLOW + "You fell too low. Teleporting to spawn!");
+        }
+    }
+
 }

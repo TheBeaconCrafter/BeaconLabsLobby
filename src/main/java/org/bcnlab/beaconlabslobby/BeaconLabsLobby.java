@@ -12,22 +12,22 @@ import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageListener {
 
     private String pluginPrefix;
-    private String pluginVersion = "1.0";
+    private String pluginVersion = "1.1";
     private String noPermsMessage = "&cYou do not have permission to use this command.";
     private BuildManager buildManager;
     private Location spawnLocation;
+
+    private Boolean returnToSpawn;
+    private Boolean healOnJoin;
 
     @Override
     public void onEnable() {
@@ -82,6 +82,8 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         config.addDefault("disable-damage", true);
         config.addDefault("disable-mob-spawning", true);
         config.addDefault("disable-food-level-change", true);
+        config.addDefault("heal-on-join", true);
+        config.addDefault("return-spawn-heightlimit", true);
 
         if (!config.contains("server-selector.settings")) {
             ConfigurationSection settingsSection = config.createSection("server-selector.settings");
@@ -137,8 +139,10 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
     private void loadConfig() {
         FileConfiguration config = getConfig();
 
-        // Load plugin prefix from config
         pluginPrefix = config.getString("plugin-prefix", "&6BeaconLabs &8» ");
+
+        healOnJoin = config.getBoolean("heal-on-join", true);
+        returnToSpawn = config.getBoolean("return-spawn-heightlimit", true);
 
         if (config.contains("spawn")) {
             this.spawnLocation = deserializeLocation(config.getString("spawn"));
@@ -147,6 +151,13 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         }
     }
 
+    public Boolean getReturnToSpawn () {
+        return returnToSpawn;
+    }
+
+    public Boolean getHealOnJoin () {
+        return healOnJoin;
+    }
 
     public Location getSpawnLocation() {
         return spawnLocation;

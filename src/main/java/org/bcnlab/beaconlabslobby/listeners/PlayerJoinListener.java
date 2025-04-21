@@ -45,6 +45,12 @@ public class PlayerJoinListener implements Listener {
         ScoreboardUtil scoreboardUtil = new ScoreboardUtil(player, plugin);
         scoreboardUtil.updateScoreboard();
         scoreboardUtil.setPlayerScoreboard();
+
+        if(plugin.getHealOnJoin()) {
+            player.setHealth(20.0);
+            player.setFoodLevel(20);
+        }
+
     }
 
     private void teleportPlayerToSpawn(Player player) {
