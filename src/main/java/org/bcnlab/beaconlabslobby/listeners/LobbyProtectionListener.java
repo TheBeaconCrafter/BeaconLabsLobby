@@ -35,6 +35,13 @@ public class LobbyProtectionListener implements Listener {
     }
 
     @EventHandler
+    public void onExplosion(org.bukkit.event.entity.ExplosionPrimeEvent event) {
+        if (plugin.getConfig().getBoolean("disable-damage", true)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (plugin.getConfig().getBoolean("disable-mob-spawning", true)) {
             event.setCancelled(true);
@@ -44,6 +51,20 @@ public class LobbyProtectionListener implements Listener {
     @EventHandler
     public void onFoodLevelChange(FoodLevelChangeEvent event) {
         if (plugin.getConfig().getBoolean("disable-food-level-change", true)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onWeatherChange(org.bukkit.event.weather.WeatherChangeEvent event) {
+        if (plugin.getConfig().getBoolean("disable-weather", true)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onTimeChange(org.bukkit.event.world.TimeSkipEvent event) {
+        if (plugin.getConfig().getBoolean("disable-time", true)) {
             event.setCancelled(true);
         }
     }

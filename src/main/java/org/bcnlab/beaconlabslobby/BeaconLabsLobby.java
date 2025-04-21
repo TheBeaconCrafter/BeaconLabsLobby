@@ -6,9 +6,7 @@ import org.bcnlab.beaconlabslobby.listeners.LobbyProtectionListener;
 import org.bcnlab.beaconlabslobby.listeners.PlayerJoinListener;
 import org.bcnlab.beaconlabslobby.managers.BuildManager;
 import org.bcnlab.beaconlabslobby.managers.InventoryListener;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -38,6 +36,14 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
 
         // Initialize BuildManager
         buildManager = new BuildManager();
+
+        if (getConfig().getBoolean("disable-weather", true)) {
+            setDefaultWeather();
+        }
+
+        if (getConfig().getBoolean("disable-time", true)) {
+            setDefaultTime();
+        }
 
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
         getServer().getMessenger().registerIncomingPluginChannel(this, "BungeeCord", this);
@@ -74,7 +80,6 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         return pluginVersion;
     }
 
-    // Method to create the default configuration if it doesn't exist
     private void createDefaultConfig() {
         FileConfiguration config = getConfig();
         config.options().copyDefaults(true);
@@ -84,6 +89,10 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         config.addDefault("disable-food-level-change", true);
         config.addDefault("heal-on-join", true);
         config.addDefault("return-spawn-heightlimit", true);
+        config.addDefault("disable-weather", true);
+        config.addDefault("disable-time", true);
+        config.addDefault("default-weather", "clear");
+        config.addDefault("default-time", 1000);
 
         if (!config.contains("server-selector.settings")) {
             ConfigurationSection settingsSection = config.createSection("server-selector.settings");
@@ -178,6 +187,41 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
             getConfig().set("spawn", serializeLocation(spawnLocation));
             saveConfig();
         }
+    }
+
+    private void setDefaultWeather() {
+        String weather = getConfig().getString("default-weather", "clear");
+
+        for (World world : Bukkit.getWorlds()) {
+            switch (weather.toLowerCase()) {
+                case "rain":
+                    world.setStorm(true);
+                    world.setThundering(false);
+                    world.setWeatherDuration(6000);
+                    break;
+                case "thunder":
+                    world.setStorm(true);
+                    world.setThundering(true);
+                    world.setWeatherDuration(6000);
+                    break;
+                case "clear":
+                default:
+                    world.setStorm(false);
+                    world.setThundering(false);
+                    world.setWeatherDuration(0);
+                    break;
+            }
+            getLogger().info("Weather set to " + weather + " in world: " + world.getName());
+        }
+    }
+
+    private void setDefaultTime() {
+        long defaultTime = getConfig().getLong("default-time", 1000);
+
+        for (World world : Bukkit.getWorlds()) {
+            world.setTime(defaultTime);
+        }
+        getLogger().info("Time set to " + defaultTime + " in all worlds.");
     }
 
     public String serializeLocation(Location location) {
