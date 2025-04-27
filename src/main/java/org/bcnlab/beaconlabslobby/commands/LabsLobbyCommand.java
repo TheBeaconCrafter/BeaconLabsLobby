@@ -17,18 +17,7 @@ public class LabsLobbyCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(plugin.getPrefix() + ChatColor.RED + "This command can only be used by players.");
-            return true;
-        }
-
-        if (!sender.hasPermission("beaconlabs.lobby.info")) {
-            sender.sendMessage(plugin.getPrefix() + ChatColor.RED + "You do not have permission to use this command.");
-            return true;
-        }
-
-        Player player = (Player) sender;
-        player.sendMessage(plugin.getPrefix() + ChatColor.RED + "BeaconLabsLobby Version " + ChatColor.GOLD + plugin.getVersion() + ChatColor.RED + " by ItsBeacon");
+        sender.sendMessage(plugin.getPrefix() + ChatColor.RED + "BeaconLabsLobby Version " + ChatColor.GOLD + plugin.getVersion() + ChatColor.RED + " by ItsBeacon");
         return true;
     }
 }

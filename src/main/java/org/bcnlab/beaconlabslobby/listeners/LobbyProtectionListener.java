@@ -90,5 +90,4 @@ public class LobbyProtectionListener implements Listener {
             player.sendMessage(plugin.getPrefix() + ChatColor.YELLOW + "You fell too low. Teleporting to spawn!");
         }
     }
-
 }

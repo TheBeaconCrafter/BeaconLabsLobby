@@ -24,7 +24,7 @@ import java.util.Arrays;
 public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageListener {
 
     private String pluginPrefix;
-    private String pluginVersion = "1.1";
+    private String pluginVersion = "1.2";
     private String noPermsMessage = "&cYou do not have permission to use this command.";
     private BuildManager buildManager;
     private Location spawnLocation;
@@ -264,7 +264,34 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
     }
 
     @Override
-    public void onPluginMessageReceived(String s, Player player, byte[] bytes) {
-        getLogger().info("Btw Bungee just sent you a message :P");
+    public void onPluginMessageReceived(String channel, Player player, byte[] bytes) {
+        if (!channel.equalsIgnoreCase("BungeeCord")) return;
+        try {
+            java.io.DataInputStream in = new java.io.DataInputStream(new java.io.ByteArrayInputStream(bytes));
+            String subchannel = in.readUTF();
+            if (subchannel.equals("ServerIP")) {
+                String server = in.readUTF();
+                String ip = in.readUTF();
+                int port = in.readUnsignedShort();
+                // Try to connect to the server's IP/port using a short socket timeout
+                Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+                    boolean isOnline = false;
+                    try (java.net.Socket socket = new java.net.Socket()) {
+                        socket.connect(new java.net.InetSocketAddress(ip, port), 400);
+                        isOnline = socket.isConnected();
+                    } catch (Exception ignored) {}
+                    final boolean status = isOnline;
+                    Bukkit.getScheduler().runTask(this, () -> {
+                        if (status) {
+                            org.bcnlab.beaconlabslobby.commands.SelectorCommand.handleOnlineResponse(server);
+                        } else {
+                            org.bcnlab.beaconlabslobby.commands.SelectorCommand.handleOfflineResponse(server);
+                        }
+                    });
+                });
+            }
+        } catch (Exception ex) {
+            getLogger().warning("Failed to parse BungeeCord plugin message: " + ex.getMessage());
+        }
     }
 }

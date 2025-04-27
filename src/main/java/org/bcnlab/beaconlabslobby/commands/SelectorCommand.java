@@ -23,8 +23,98 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import org.bukkit.Bukkit;
+import org.bukkit.scheduler.BukkitRunnable;
 
 public class SelectorCommand implements CommandExecutor, Listener {
+    // Track pending requests per server (supporting multiple requests per server)
+    private static final Map<String, List<PendingOnlineRequest>> pendingOnlineRequests = new HashMap<>();
+    private static final long ONLINE_REQUEST_TIMEOUT = 2500; // ms
+
+    // Data structure to hold info needed to update the GUI
+    private static class PendingOnlineRequest {
+        public final int slot;
+        public final Inventory inventory;
+        public final List<String> lore;
+        public final String name;
+        public final Material type;
+        public final long timestamp;
+        public PendingOnlineRequest(int slot, Inventory inventory, List<String> lore, String name, Material type) {
+            this.slot = slot;
+            this.inventory = inventory;
+            this.lore = lore;
+            this.name = name;
+            this.type = type;
+            this.timestamp = System.currentTimeMillis();
+        }
+    }
+
+    // Called from loadServerItems
+    public static void addPendingOnlineRequest(String serverName, int slot, Inventory inventory, Player player, BeaconLabsLobby plugin, List<String> lore, String name, Material type) {
+        // Store the info for later update (support multiple requests per server)
+        pendingOnlineRequests.computeIfAbsent(serverName, k -> new ArrayList<>())
+            .add(new PendingOnlineRequest(slot, inventory, lore, name, type));
+        // Send BungeeCord ServerIP request
+        ByteArrayDataOutput out = ByteStreams.newDataOutput();
+        out.writeUTF("ServerIP");
+        out.writeUTF(serverName);
+        player.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
+        // Schedule timeout for offline fallback
+        Bukkit.getScheduler().runTaskLater(plugin, () -> handleOnlineTimeout(serverName), ONLINE_REQUEST_TIMEOUT / 50); // convert ms to ticks
+    }
+
+    // Called from BeaconLabsLobby.onPluginMessageReceived
+    public static void handleOnlineResponse(String serverName) {
+        List<PendingOnlineRequest> reqs = pendingOnlineRequests.remove(serverName);
+        if (reqs != null) {
+            for (PendingOnlineRequest req : reqs) {
+                updateItemLoreStatic(req.inventory, req.slot, req.lore, ChatColor.GREEN + "Online");
+            }
+        }
+    }
+
+    // Called from BeaconLabsLobby.onPluginMessageReceived for offline servers
+    public static void handleOfflineResponse(String serverName) {
+        List<PendingOnlineRequest> reqs = pendingOnlineRequests.remove(serverName);
+        if (reqs != null) {
+            for (PendingOnlineRequest req : reqs) {
+                updateItemLoreStatic(req.inventory, req.slot, req.lore, ChatColor.RED + "Offline");
+            }
+        }
+    }
+
+    // Called on timeout if no response
+    private static void handleOnlineTimeout(String serverName) {
+        List<PendingOnlineRequest> reqs = pendingOnlineRequests.remove(serverName);
+        if (reqs != null) {
+            for (PendingOnlineRequest req : reqs) {
+                updateItemLoreStatic(req.inventory, req.slot, req.lore, ChatColor.RED + "Offline");
+            }
+        }
+    }
+
+    // Static helper to update lore from outside inner class
+    private static void updateItemLoreStatic(Inventory inventory, int slot, List<String> lore, String onlineStatus) {
+        ItemStack item = inventory.getItem(slot);
+        if (item == null) return;
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return;
+        List<String> updatedLore = new ArrayList<>();
+        for (String line : lore) {
+            if (line.contains("%online%")) {
+                updatedLore.add(ChatColor.translateAlternateColorCodes('&', line.replace("%online%", onlineStatus)));
+            } else {
+                updatedLore.add(ChatColor.translateAlternateColorCodes('&', line));
+            }
+        }
+        meta.setLore(updatedLore);
+        item.setItemMeta(meta);
+        inventory.setItem(slot, item);
+    }
+
 
     private final BeaconLabsLobby plugin;
 
@@ -105,16 +195,49 @@ public class SelectorCommand implements CommandExecutor, Listener {
 
                     // Apply color codes and formatting to lore
                     List<String> formattedLore = new ArrayList<>();
+                    boolean hasOnlinePlaceholder = false;
                     for (String line : lore) {
-                        formattedLore.add(ChatColor.translateAlternateColorCodes('&', line));
+                        if (line.contains("%online%")) {
+                            hasOnlinePlaceholder = true;
+                            // Temporary placeholder (gray)
+                            formattedLore.add(ChatColor.translateAlternateColorCodes('&', line.replace("%online%", ChatColor.GRAY + "Loading...")));
+                        } else {
+                            formattedLore.add(ChatColor.translateAlternateColorCodes('&', line));
+                        }
                     }
                     meta.setLore(formattedLore);
-
                     item.setItemMeta(meta);
-                }
 
-                inventory.setItem(slot, item);
+                    inventory.setItem(slot, item);
+
+                    // If %online% is present, send PlayerCount request
+                    if (hasOnlinePlaceholder) {
+                        Player anyPlayer = Bukkit.getOnlinePlayers().stream().findFirst().orElse(null);
+                        if (anyPlayer != null) {
+                            addPendingOnlineRequest(serverName, slot, inventory, anyPlayer, plugin, lore, name, type);
+                        }
+                    }
+                }
             }
+        }
+
+        // Helper to update the lore of an item in the inventory
+        private void updateItemLore(int slot, List<String> lore, String onlineStatus) {
+            ItemStack item = inventory.getItem(slot);
+            if (item == null) return;
+            ItemMeta meta = item.getItemMeta();
+            if (meta == null) return;
+            List<String> updatedLore = new ArrayList<>();
+            for (String line : lore) {
+                if (line.contains("%online%")) {
+                    updatedLore.add(ChatColor.translateAlternateColorCodes('&', line.replace("%online%", onlineStatus)));
+                } else {
+                    updatedLore.add(ChatColor.translateAlternateColorCodes('&', line));
+                }
+            }
+            meta.setLore(updatedLore);
+            item.setItemMeta(meta);
+            inventory.setItem(slot, item);
         }
 
         @Override
