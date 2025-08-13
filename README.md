@@ -43,16 +43,17 @@
 
 ### Commands
 
-| Command                 | Description                                 | Permission                               |
-|-------------------------|---------------------------------------------|------------------------------------------|
-| `/selector`             | Opens the server selector GUI.              | -                                        |
-| `/labslobby`            | Displays plugin information.                | -                                        |
-| `/build`                | Toggles your build mode.                    | `beaconlabs.lobby.build.self`            |
-| `/build <player>`       | Toggles build mode for another player.      | `beaconlabs.lobby.build.others`          |
-| `/spawn`                | Teleports to lobby spawn.                   | -                                        |
-| `/setspawn`             | Sets the current location as spawn.         | `beaconlabs.lobby.setspawn` (default)
-| `/hider`                | Opens the player hider GUI.                 | -                                        |
-| `/refreshscoreboard`    | Refreshes your scoreboard.                  | -                                        |
+| Command              | Description                             | Permission                           |
+|----------------------|-----------------------------------------|--------------------------------------|
+| `/selector`          | Opens the server selector GUI.          | -                                    |
+| `/labslobby`         | Displays plugin information.            | -                                    |
+| `/build`             | Toggles your build mode.                | `beaconlabs.lobby.build.self`        |
+| `/build <player>`    | Toggles build mode for another player.  | `beaconlabs.lobby.build.others`      |
+| `/spawn`             | Teleports to lobby spawn.               | -                                    |
+| `/setspawn`          | Sets the current location as spawn.     | `beaconlabs.lobby.setspawn` (default) 
+| `/hider`             | Opens the player hider GUI.             | -                                    |
+| `/refreshscoreboard` | Refreshes your scoreboard.              | -                                    |
+| `/refreshheight`     | Refreshes your lobby protection height. | `beaconlabs.lobby.refreshheight`      |
 
 ### Permissions
 
