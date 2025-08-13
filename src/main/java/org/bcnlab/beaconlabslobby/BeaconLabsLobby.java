@@ -81,6 +81,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         getCommand("setspawn").setExecutor(new SetSpawnCommand(this));
         getCommand("hider").setExecutor(new HiderCommand(this));
         getCommand("refreshscoreboard").setExecutor(new RefreshScoreboardCommand(this));
+        getCommand("refreshheight").setExecutor(new RefreshHeightCommand(this));
 
         getLogger().info("BeaconLabs Lobby was enabled!");
     }
@@ -189,6 +190,12 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
 
     public Integer getHeightlimitBottom() {
         return heightlimitBottom;
+    }
+
+    public void reloadHeightLimits() {
+        reloadConfig();
+        heightlimitTop = getConfig().getInt("heightlimit-top", 256);
+        heightlimitBottom = getConfig().getInt("heightlimit-bottom", 10);
     }
 
     public Boolean getReturnToSpawn () {

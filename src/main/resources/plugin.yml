@@ -28,3 +28,7 @@ commands:
     usage: /refreshscoreboard
     description: Refresh the scoreboard
     aliases: [refreshsb, resb]
+  refreshheight:
+    usage: /refreshheight
+    description: Refresh the height limit configuration
+    aliases: [refreshh, reh]
