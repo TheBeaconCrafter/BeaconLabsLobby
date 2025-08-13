@@ -82,10 +82,10 @@ public class LobbyProtectionListener implements Listener {
         if (event.getFrom().getY() == event.getTo().getY()) return;
 
         double y = player.getLocation().getY();
-        if (y > 255) {
+        if (y > plugin.getHeightlimitTop()) {
             player.sendMessage(plugin.getPrefix() + ChatColor.YELLOW + "You are too high! Teleporting you down.");
             player.teleport(spawn);
-        } else if (y < 10) {
+        } else if (y < plugin.getHeightlimitBottom()) {
             player.teleport(spawn);
             player.sendMessage(plugin.getPrefix() + ChatColor.YELLOW + "You fell too low. Teleporting to spawn!");
         }

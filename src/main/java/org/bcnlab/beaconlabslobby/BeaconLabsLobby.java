@@ -24,10 +24,13 @@ import java.util.Arrays;
 public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageListener {
 
     private String pluginPrefix;
-    private String pluginVersion = "1.2";
+    private String pluginVersion = "1.3";
     private String noPermsMessage = "&cYou do not have permission to use this command.";
     private BuildManager buildManager;
     private Location spawnLocation;
+
+    private Integer heightlimitTop;
+    private Integer heightlimitBottom;
 
     private Boolean returnToSpawn;
     private Boolean healOnJoin;
@@ -104,6 +107,8 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         config.addDefault("disable-food-level-change", true);
         config.addDefault("heal-on-join", true);
         config.addDefault("return-spawn-heightlimit", true);
+        config.addDefault("heightlimit-top", 256);
+        config.addDefault("heightlimit-bottom", 10);
         config.addDefault("disable-weather", true);
         config.addDefault("disable-time", true);
         config.addDefault("default-weather", "clear");
@@ -168,11 +173,22 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         healOnJoin = config.getBoolean("heal-on-join", true);
         returnToSpawn = config.getBoolean("return-spawn-heightlimit", true);
 
+        heightlimitBottom = config.getInt("heightlimit-bottom", 10);
+        heightlimitTop = config.getInt("heightlimit-top", 256);
+
         if (config.contains("spawn")) {
             this.spawnLocation = deserializeLocation(config.getString("spawn"));
         } else {
             getLogger().warning("Config does not contain a 'spawn' section.");
         }
+    }
+
+    public Integer getHeightlimitTop() {
+        return heightlimitTop;
+    }
+
+    public Integer getHeightlimitBottom() {
+        return heightlimitBottom;
     }
 
     public Boolean getReturnToSpawn () {
