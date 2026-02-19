@@ -32,3 +32,6 @@ commands:
     usage: /refreshheight
     description: Refresh the height limit configuration
     aliases: [refreshh, reh]
+  privateselector:
+    usage: /privateselector
+    description: Opens the private server selector

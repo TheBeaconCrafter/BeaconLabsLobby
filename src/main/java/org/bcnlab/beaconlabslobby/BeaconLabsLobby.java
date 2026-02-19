@@ -6,10 +6,13 @@ import org.bcnlab.beaconlabslobby.listeners.LobbyProtectionListener;
 import org.bcnlab.beaconlabslobby.listeners.PlayerJoinListener;
 import org.bcnlab.beaconlabslobby.managers.BuildManager;
 import org.bcnlab.beaconlabslobby.managers.InventoryListener;
+import org.bcnlab.beaconlabslobby.commands.PrivateSelectorCommand;
 import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.bukkit.entity.Entity;
@@ -20,6 +23,7 @@ import org.bukkit.entity.WaterMob;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageListener {
 
@@ -75,6 +79,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         getServer().getPluginManager().registerEvents(buildListener, this);
 
         getCommand("selector").setExecutor(new SelectorCommand(this));
+        getCommand("privateselector").setExecutor(new PrivateSelectorCommand(this));
         getCommand("labslobby").setExecutor(new LabsLobbyCommand(this));
         getCommand("build").setExecutor(new BuildCommand(this, buildManager));
         getCommand("spawn").setExecutor(new SpawnCommand(this));
@@ -124,7 +129,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
             settingsSection.set("slot", 2);
         }
 
-        // Set default values for server selector item
+        // Set default values for primary server selector items
         if (!config.contains("server-selector.items")) {
             config.set("server-selector.items", new ArrayList<>());
 
@@ -152,7 +157,34 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
             item2.set("server", "server3");
         }
 
-        // Set default values for server selector item
+        // Defaults for private server selector (second selector)
+        if (!config.contains("private-server-selector.enabled")) {
+            config.set("private-server-selector.enabled", false);
+        }
+        if (!config.contains("private-server-selector.permission")) {
+            config.set("private-server-selector.permission", "beaconlabslobby.privateselector");
+        }
+        if (!config.contains("private-server-selector.settings")) {
+            ConfigurationSection privateSettings = config.createSection("private-server-selector.settings");
+            privateSettings.set("name", "&6BeaconLabs &8» &5Private Selector");
+            privateSettings.set("type", Material.NETHER_STAR.toString());
+            privateSettings.set("lore", Arrays.asList("&dPrivate server selector", "&7Only visible with permission"));
+            privateSettings.set("rows", 3);
+            privateSettings.set("slot", 4);
+        }
+
+        if (!config.contains("private-server-selector.items")) {
+            config.set("private-server-selector.items", new ArrayList<>());
+
+            ConfigurationSection privateItem = config.createSection("private-server-selector.items.private1");
+            privateItem.set("name", "&5Private Server 1");
+            privateItem.set("type", Material.NETHER_STAR.toString());
+            privateItem.set("lore", Arrays.asList("&7Click to join", "&eThis server is private", "&7Status: %online%"));
+            privateItem.set("slot", 11);
+            privateItem.set("server", "private_server_1");
+        }
+
+        // Set default values for player hider item
         if (!config.contains("player-hider.settings")) {
             ConfigurationSection settingsSection = config.createSection("player-hider.settings");
             settingsSection.set("name", "&6BeaconLabs &8» &aPlayer Hider");
@@ -166,7 +198,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
     }
 
 
-    private void loadConfig() {
+    public void loadConfig() {
         FileConfiguration config = getConfig();
 
         pluginPrefix = config.getString("plugin-prefix", "&6BeaconLabs &8» ");
@@ -224,6 +256,124 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         if (spawnLocation != null) {
             getConfig().set("spawn", serializeLocation(spawnLocation));
             saveConfig();
+        }
+    }
+
+    public void reapplyLobbyItemsToAllPlayers() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.getInventory().clear();
+            giveServerSelectorItem(player);
+            givePrivateServerSelectorItem(player);
+            givePlayerHiderItem(player);
+        }
+    }
+
+    private void giveServerSelectorItem(Player player) {
+        FileConfiguration config = getConfig();
+
+        if (config.contains("server-selector.items")) {
+            ConfigurationSection itemConfig = config.getConfigurationSection("server-selector.settings");
+
+            String itemName = itemConfig.getString("name", "Server Selector");
+            itemName = ChatColor.translateAlternateColorCodes('&', itemName);
+            Material itemType = Material.valueOf(itemConfig.getString("type", "COMPASS"));
+            List<String> itemLore = itemConfig.getStringList("lore");
+            int itemSlot = itemConfig.getInt("slot", 2);
+
+            ItemStack item = new ItemStack(itemType);
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(itemName);
+                List<String> translatedLore = new ArrayList<>();
+                for (String line : itemLore) {
+                    String loreColor = ChatColor.translateAlternateColorCodes('&', line);
+                    translatedLore.add(loreColor);
+                }
+                meta.setLore(translatedLore);
+                item.setItemMeta(meta);
+            }
+
+            player.getInventory().setItem(itemSlot, item);
+        } else {
+            getLogger().warning("Configuration for server selector item not found!");
+        }
+    }
+
+    private void givePrivateServerSelectorItem(Player player) {
+        FileConfiguration config = getConfig();
+
+        if (!config.getBoolean("private-server-selector.enabled", false)) {
+            return;
+        }
+
+        String permission = config.getString("private-server-selector.permission", "beaconlabslobby.privateselector");
+        if (permission != null && !permission.isEmpty() && !player.hasPermission(permission)) {
+            return;
+        }
+
+        if (config.contains("private-server-selector.settings")) {
+            ConfigurationSection itemConfig = config.getConfigurationSection("private-server-selector.settings");
+
+            String itemName = itemConfig.getString("name", "Private Selector");
+            itemName = ChatColor.translateAlternateColorCodes('&', itemName);
+            String typeName = itemConfig.getString("type", "NETHER_STAR");
+            Material itemType = Material.matchMaterial(typeName);
+            if (itemType == null) {
+                itemType = Material.NETHER_STAR;
+            }
+
+            List<String> itemLore = itemConfig.getStringList("lore");
+            int itemSlot = itemConfig.getInt("slot", 4);
+
+            ItemStack item = new ItemStack(itemType);
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(itemName);
+                List<String> translatedLore = new ArrayList<>();
+                for (String line : itemLore) {
+                    translatedLore.add(ChatColor.translateAlternateColorCodes('&', line));
+                }
+                meta.setLore(translatedLore);
+                item.setItemMeta(meta);
+            }
+
+            player.getInventory().setItem(itemSlot, item);
+        }
+    }
+
+    private void givePlayerHiderItem(Player player) {
+        FileConfiguration config = getConfig();
+
+        if (config.contains("player-hider.settings")) {
+            ConfigurationSection itemConfig = config.getConfigurationSection("player-hider.settings");
+
+            String itemName = itemConfig.getString("name", "Player Hider");
+            itemName = ChatColor.translateAlternateColorCodes('&', itemName);
+            String typeName = itemConfig.getString("type", "BLAZE_ROD");
+            Material itemType = Material.matchMaterial(typeName);
+            if (itemType == null) {
+                itemType = Material.BLAZE_ROD;
+            }
+
+            List<String> itemLore = itemConfig.getStringList("lore");
+            int itemSlot = itemConfig.getInt("slot", 6);
+
+            ItemStack item = new ItemStack(itemType);
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(itemName);
+                List<String> translatedLore = new ArrayList<>();
+                for (String line : itemLore) {
+                    String loreColor = ChatColor.translateAlternateColorCodes('&', line);
+                    translatedLore.add(loreColor);
+                }
+                meta.setLore(translatedLore);
+                item.setItemMeta(meta);
+            }
+
+            player.getInventory().setItem(itemSlot, item);
+        } else {
+            getLogger().warning("Configuration for player hider item not found!");
         }
     }
 

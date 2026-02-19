@@ -17,7 +17,24 @@ public class LabsLobbyCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        sender.sendMessage(plugin.getPrefix() + ChatColor.RED + "BeaconLabsLobby Version " + ChatColor.GOLD + plugin.getVersion() + ChatColor.RED + " by ItsBeacon");
-        return true;
+        if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
+            String perm = "beaconlabslobby.reload";
+            if (!sender.hasPermission(perm)) {
+                sender.sendMessage(plugin.getPrefix() + ChatColor.RED + "You do not have permission to reload the config.");
+                return true;
+            }
+
+            plugin.reloadConfig();
+            plugin.loadConfig();
+            plugin.loadSpawnLocation();
+            plugin.reapplyLobbyItemsToAllPlayers();
+
+            sender.sendMessage(plugin.getPrefix() + ChatColor.GREEN + "Configuration reloaded.");
+            return true;
+        } else {
+            sender.sendMessage(plugin.getPrefix() + ChatColor.RED + "BeaconLabsLobby Version " + ChatColor.GOLD + plugin.getVersion() + ChatColor.RED + " by ItsBeacon");
+            sender.sendMessage(ChatColor.GRAY + "Use " + ChatColor.YELLOW + "/labslobby reload" + ChatColor.GRAY + " to reload the configuration.");
+            return true;
+        }
     }
 }

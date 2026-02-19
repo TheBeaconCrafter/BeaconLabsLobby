@@ -39,6 +39,7 @@ public class PlayerJoinListener implements Listener {
 
         // Give configurable items on join
         giveServerSelectorItem(player);
+        givePrivateServerSelectorItem(player);
         givePlayerHiderItem(player);
 
         //Scoreboard
@@ -107,6 +108,48 @@ public class PlayerJoinListener implements Listener {
         }
     }
 
+    private void givePrivateServerSelectorItem(Player player) {
+        FileConfiguration config = plugin.getConfig();
+
+        if (!config.getBoolean("private-server-selector.enabled", false)) {
+            return;
+        }
+
+        String permission = config.getString("private-server-selector.permission", "beaconlabslobby.privateselector");
+        if (permission != null && !permission.isEmpty() && !player.hasPermission(permission)) {
+            return;
+        }
+
+        if (config.contains("private-server-selector.settings")) {
+            ConfigurationSection itemConfig = config.getConfigurationSection("private-server-selector.settings");
+
+            String itemName = itemConfig.getString("name", "Private Selector");
+            itemName = ChatColor.translateAlternateColorCodes('&', itemName);
+            String typeName = itemConfig.getString("type", "NETHER_STAR");
+            Material itemType = Material.matchMaterial(typeName);
+            if (itemType == null) {
+                itemType = Material.NETHER_STAR;
+            }
+
+            List<String> itemLore = itemConfig.getStringList("lore");
+            int itemSlot = itemConfig.getInt("slot", 4);
+
+            ItemStack item = new ItemStack(itemType);
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(itemName);
+                List<String> translatedLore = new ArrayList<>();
+                for (String line : itemLore) {
+                    translatedLore.add(ChatColor.translateAlternateColorCodes('&', line));
+                }
+                meta.setLore(translatedLore);
+                item.setItemMeta(meta);
+            }
+
+            player.getInventory().setItem(itemSlot, item);
+        }
+    }
+
     private void givePlayerHiderItem(Player player) {
         FileConfiguration config = plugin.getConfig();
 
@@ -151,6 +194,11 @@ public class PlayerJoinListener implements Listener {
 
             Player player = event.getPlayer();
             player.performCommand("selector");
+        } else if (item != null && isPrivateServerSelectorItem(item)) {
+            event.setCancelled(true);
+
+            Player player = event.getPlayer();
+            player.performCommand("privateselector");
         } else if (item != null && isHiderItem(item)) {
             event.setCancelled(true); // Prevent normal item use
 
@@ -190,6 +238,25 @@ public class PlayerJoinListener implements Listener {
                     expectedName = ChatColor.translateAlternateColorCodes('&', expectedName); // Translate color codes
                     String displayName = meta.getDisplayName();
                     displayName = ChatColor.translateAlternateColorCodes('&', displayName); // Translate color codes
+                    return displayName.equals(expectedName);
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean isPrivateServerSelectorItem(ItemStack item) {
+        FileConfiguration config = plugin.getConfig();
+        if (config.contains("private-server-selector.settings")) {
+            String itemType = config.getString("private-server-selector.settings.type", "NETHER_STAR");
+            Material expectedType = Material.matchMaterial(itemType);
+            if (expectedType != null && item.getType() == expectedType) {
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    String expectedName = config.getString("private-server-selector.settings.name", "Private Selector");
+                    expectedName = ChatColor.translateAlternateColorCodes('&', expectedName);
+                    String displayName = meta.getDisplayName();
+                    displayName = ChatColor.translateAlternateColorCodes('&', displayName);
                     return displayName.equals(expectedName);
                 }
             }
