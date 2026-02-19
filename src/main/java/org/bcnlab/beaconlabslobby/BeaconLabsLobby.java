@@ -24,7 +24,7 @@ import java.util.Arrays;
 public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageListener {
 
     private String pluginPrefix;
-    private String pluginVersion = "1.3";
+    private String pluginVersion = "1.4";
     private String noPermsMessage = "&cYou do not have permission to use this command.";
     private BuildManager buildManager;
     private Location spawnLocation;
