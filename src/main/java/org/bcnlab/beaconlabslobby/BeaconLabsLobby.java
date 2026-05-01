@@ -28,7 +28,7 @@ import java.util.List;
 public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageListener {
 
     private String pluginPrefix;
-    private String pluginVersion = "1.4";
+    private String pluginVersion = "1.5";
     private String noPermsMessage = "&cYou do not have permission to use this command.";
     private BuildManager buildManager;
     private Location spawnLocation;
@@ -407,9 +407,19 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         long defaultTime = getConfig().getLong("default-time", 1000);
 
         for (World world : Bukkit.getWorlds()) {
-            world.setTime(defaultTime);
+            // Paper 26.1 requires DO_DAYLIGHT_CYCLE to be enabled for time changes
+            if (!world.getGameRuleValue(GameRule.DO_DAYLIGHT_CYCLE)) {
+                world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, true);
+                getLogger().info("Enabled DO_DAYLIGHT_CYCLE for world: " + world.getName());
+            }
+
+            try {
+                world.setTime(defaultTime);
+                getLogger().info("Time set to " + defaultTime + " in world: " + world.getName());
+            } catch (IllegalArgumentException e) {
+                getLogger().warning("Could not set time in world " + world.getName() + " - world may not have an active clock: " + e.getMessage());
+            }
         }
-        getLogger().info("Time set to " + defaultTime + " in all worlds.");
     }
 
     public String serializeLocation(Location location) {
