@@ -8,7 +8,7 @@ import org.bukkit.entity.Player;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
-public class LobbyNPCCommand implements CommandExecutor {
+public class LobbyNPCCommand implements CommandExecutor, org.bukkit.command.TabCompleter {
 
     private final BeaconLabsLobby plugin;
     private final net.kyori.adventure.text.Component prefix;
@@ -33,7 +33,7 @@ public class LobbyNPCCommand implements CommandExecutor {
         }
 
         if (args.length == 0) {
-            player.sendMessage(prefix.append(Component.text("Usage: /lobbynpc <create|delete> <name> [displayName]", NamedTextColor.RED)));
+            player.sendMessage(prefix.append(Component.text("Usage: /lobbynpc <create|delete|list|skin>", NamedTextColor.RED)));
             return true;
         }
 
@@ -57,10 +57,38 @@ public class LobbyNPCCommand implements CommandExecutor {
             String name = args[1];
             plugin.getNpcManager().deleteNpc(name);
             player.sendMessage(prefix.append(Component.text("Deleted NPC " + name, NamedTextColor.GREEN)));
+        } else if (subCommand.equals("list")) {
+            plugin.getNpcManager().listNpcs(player);
+        } else if (subCommand.equals("skin")) {
+            if (args.length < 3) {
+                player.sendMessage(prefix.append(Component.text("Usage: /lobbynpc skin <name> <playerName>", NamedTextColor.RED)));
+                return true;
+            }
+            String name = args[1];
+            String playerName = args[2];
+            plugin.getNpcManager().setSkin(name, playerName);
+            player.sendMessage(prefix.append(Component.text("Set skin for NPC " + name + " to " + playerName, NamedTextColor.GREEN)));
         } else {
             player.sendMessage(prefix.append(Component.text("Unknown subcommand.", NamedTextColor.RED)));
         }
-
         return true;
+    }
+    
+    @Override
+    public java.util.List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        java.util.List<String> completions = new java.util.ArrayList<>();
+        if (args.length == 1) {
+            String[] subs = {"create", "delete", "list", "skin"};
+            for (String sub : subs) {
+                if (sub.startsWith(args[0].toLowerCase())) completions.add(sub);
+            }
+        } else if (args.length == 2 && (args[0].equalsIgnoreCase("delete") || args[0].equalsIgnoreCase("skin"))) {
+            for (de.oliver.fancynpcs.api.Npc npc : de.oliver.fancynpcs.api.FancyNpcsPlugin.get().getNpcManager().getAllNpcs()) {
+                if (npc.getData().getName().toLowerCase().startsWith(args[1].toLowerCase())) {
+                    completions.add(npc.getData().getName());
+                }
+            }
+        }
+        return completions;
     }
 }

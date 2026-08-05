@@ -274,6 +274,23 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
                             return Command.SINGLE_SUCCESS;
                         })
                         .then(Commands.argument("args", StringArgumentType.greedyString())
+                            .suggests((ctx, builder) -> {
+                                String argsStr = StringArgumentType.getString(ctx, "args");
+                                String[] args = argsStr.split(" ", -1);
+                                if (args.length == 1) {
+                                    String[] subs = {"create", "delete", "list", "skin"};
+                                    for (String sub : subs) {
+                                        if (sub.startsWith(args[0].toLowerCase())) builder.suggest(sub);
+                                    }
+                                } else if (args.length == 2 && (args[0].equalsIgnoreCase("delete") || args[0].equalsIgnoreCase("skin"))) {
+                                    for (de.oliver.fancynpcs.api.Npc npc : de.oliver.fancynpcs.api.FancyNpcsPlugin.get().getNpcManager().getAllNpcs()) {
+                                        if (npc.getData().getName().toLowerCase().startsWith(args[1].toLowerCase())) {
+                                            builder.suggest(npc.getData().getName());
+                                        }
+                                    }
+                                }
+                                return builder.buildFuture();
+                            })
                             .executes(ctx -> {
                                 CommandSender sender = ctx.getSource().getSender();
                                 String argsStr = StringArgumentType.getString(ctx, "args");

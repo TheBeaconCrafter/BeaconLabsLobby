@@ -60,7 +60,7 @@ public class ScoreboardUtil {
             config.set("Scoreboard.display.message6", "<white>Server</white>");
             config.set("Scoreboard.display.message7", "<dark_gray>▪</dark_gray> <gray>Lobby 1</gray>");
             config.set("Scoreboard.display.message8", "    ");
-            config.set("Scoreboard.display.message9", "<gradient:gold:yellow>play.beaconlabs.org</gradient>");
+            config.set("Scoreboard.display.message9", "<gradient:gold:yellow>bcnlab.org</gradient>");
 
             plugin.saveConfig();
             plugin.getLogger().log(Level.INFO, "Default scoreboard configuration created.");

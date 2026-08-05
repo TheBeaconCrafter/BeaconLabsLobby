@@ -68,7 +68,7 @@ public class HiderCommand implements CommandExecutor, Listener {
                 redMeta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Hide Players").decoration(TextDecoration.ITALIC, false));
                 redDye.setItemMeta(redMeta);
             }
-            this.inventory.setItem(2, redDye);
+            this.inventory.setItem(11, redDye);
 
             // Create green dye (on) item
             ItemStack greenDye = new ItemStack(Material.EMERALD);
@@ -77,7 +77,7 @@ public class HiderCommand implements CommandExecutor, Listener {
                 greenMeta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<green>Show Players").decoration(TextDecoration.ITALIC, false));
                 greenDye.setItemMeta(greenMeta);
             }
-            this.inventory.setItem(6, greenDye);
+            this.inventory.setItem(15, greenDye);
         }
 
         @Override

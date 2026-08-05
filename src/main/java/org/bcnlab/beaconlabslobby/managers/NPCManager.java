@@ -41,6 +41,10 @@ public class NPCManager implements Listener {
         Player player = event.getPlayer();
         String npcName = npc.getData().getName();
 
+        // Reaction
+        player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_TRADE, 1.0f, 1.0f);
+        npc.lookAt(player, player.getLocation()); // Make NPC look at player
+
         if (npcConfig.contains("npcs." + npcName)) {
             String action = npcConfig.getString("npcs." + npcName + ".action");
             String value = npcConfig.getString("npcs." + npcName + ".value");
@@ -63,6 +67,15 @@ public class NPCManager implements Listener {
         FancyNpcsPlugin.get().getNpcManager().registerNpc(npc);
         npc.create();
         npc.spawnForAll();
+        
+        // Save to config immediately
+        npcConfig.set("npcs." + name + ".action", "COMMAND");
+        npcConfig.set("npcs." + name + ".value", "say Hello");
+        try {
+            npcConfig.save(npcFile);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to save npc config: " + e.getMessage());
+        }
     }
     
     public void deleteNpc(String name) {
@@ -70,6 +83,40 @@ public class NPCManager implements Listener {
         if (npc != null) {
             npc.removeForAll();
             FancyNpcsPlugin.get().getNpcManager().removeNpc(npc);
+            
+            // Remove from config immediately
+            npcConfig.set("npcs." + name, null);
+            try {
+                npcConfig.save(npcFile);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to save npc config: " + e.getMessage());
+            }
+        }
+    }
+    
+    public void listNpcs(Player player) {
+        player.sendMessage(net.kyori.adventure.text.Component.text("--- NPCs ---", net.kyori.adventure.text.format.NamedTextColor.AQUA));
+        for (Npc npc : FancyNpcsPlugin.get().getNpcManager().getAllNpcs()) {
+            player.sendMessage(net.kyori.adventure.text.Component.text("- " + npc.getData().getName(), net.kyori.adventure.text.format.NamedTextColor.GRAY));
+        }
+    }
+    
+    public void setSkin(String name, String skinName) {
+        Npc npc = FancyNpcsPlugin.get().getNpcManager().getNpc(name);
+        if (npc != null) {
+            de.oliver.fancynpcs.api.skins.SkinData skinData = FancyNpcsPlugin.get().getSkinManager().getByUsername(skinName, null);
+            if (skinData != null) {
+                npc.getData().setSkinData(skinData);
+                npc.removeForAll();
+                npc.spawnForAll();
+                
+                npcConfig.set("npcs." + name + ".skin", skinName);
+                try {
+                    npcConfig.save(npcFile);
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Failed to save npc config: " + e.getMessage());
+                }
+            }
         }
     }
 }
