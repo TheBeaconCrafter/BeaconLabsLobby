@@ -275,21 +275,27 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
                         })
                         .then(Commands.argument("args", StringArgumentType.greedyString())
                             .suggests((ctx, builder) -> {
-                                String argsStr = StringArgumentType.getString(ctx, "args");
+                                String argsStr = builder.getRemaining();
                                 String[] args = argsStr.split(" ", -1);
+                                
+                                // Adjust the builder to only replace the last word
+                                int lastSpace = argsStr.lastIndexOf(' ');
+                                com.mojang.brigadier.suggestion.SuggestionsBuilder wordBuilder = 
+                                    builder.createOffset(builder.getStart() + lastSpace + 1);
+                                    
                                 if (args.length == 1) {
                                     String[] subs = {"create", "delete", "list", "skin"};
                                     for (String sub : subs) {
-                                        if (sub.startsWith(args[0].toLowerCase())) builder.suggest(sub);
+                                        if (sub.startsWith(args[0].toLowerCase())) wordBuilder.suggest(sub);
                                     }
                                 } else if (args.length == 2 && (args[0].equalsIgnoreCase("delete") || args[0].equalsIgnoreCase("skin"))) {
                                     for (de.oliver.fancynpcs.api.Npc npc : de.oliver.fancynpcs.api.FancyNpcsPlugin.get().getNpcManager().getAllNpcs()) {
                                         if (npc.getData().getName().toLowerCase().startsWith(args[1].toLowerCase())) {
-                                            builder.suggest(npc.getData().getName());
+                                            wordBuilder.suggest(npc.getData().getName());
                                         }
                                     }
                                 }
-                                return builder.buildFuture();
+                                return wordBuilder.buildFuture();
                             })
                             .executes(ctx -> {
                                 CommandSender sender = ctx.getSource().getSender();
