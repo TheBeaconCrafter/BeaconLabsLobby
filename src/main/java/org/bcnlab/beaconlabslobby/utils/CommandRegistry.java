@@ -34,6 +34,25 @@ public class CommandRegistry {
                 return Command.SINGLE_SUCCESS;
             })
             .then(Commands.argument("args", StringArgumentType.greedyString())
+                .suggests((ctx, builder) -> {
+                    if (executor instanceof org.bukkit.command.TabCompleter) {
+                        String input = ctx.getInput();
+                        int lastSpace = input.lastIndexOf(' ');
+                        String[] args = input.substring(input.indexOf(' ') + 1).split(" ", -1);
+                        List<String> completions = ((org.bukkit.command.TabCompleter) executor).onTabComplete(ctx.getSource().getSender(), null, name, args);
+                        if (completions != null) {
+                            String lastArg = args.length > 0 ? args[args.length - 1] : "";
+                            com.mojang.brigadier.suggestion.SuggestionsBuilder offsetBuilder = builder.createOffset(builder.getStart() + lastSpace + 1 - builder.getStart());
+                            for (String c : completions) {
+                                if (c.toLowerCase().startsWith(lastArg.toLowerCase())) {
+                                    offsetBuilder.suggest(c);
+                                }
+                            }
+                            return offsetBuilder.buildFuture();
+                        }
+                    }
+                    return builder.buildFuture();
+                })
                 .executes(ctx -> {
                     CommandSender sender = ctx.getSource().getSender();
                     String argsStr = StringArgumentType.getString(ctx, "args");

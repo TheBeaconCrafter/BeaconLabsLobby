@@ -68,7 +68,9 @@ public class HiderCommand implements CommandExecutor, Listener {
                 pane.setItemMeta(paneMeta);
             }
             for (int i = 0; i < 27; i++) {
-                this.inventory.setItem(i, pane);
+                if (i < 9 || i >= 18 || i % 9 == 0 || i % 9 == 8) {
+                    this.inventory.setItem(i, pane);
+                }
             }
 
             // Create red dye (off) item

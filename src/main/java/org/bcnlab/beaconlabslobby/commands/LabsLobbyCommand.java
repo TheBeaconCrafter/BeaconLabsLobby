@@ -1,11 +1,11 @@
 package org.bcnlab.beaconlabslobby.commands;
 
 import org.bcnlab.beaconlabslobby.BeaconLabsLobby;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 public class LabsLobbyCommand implements CommandExecutor {
 
@@ -20,7 +20,7 @@ public class LabsLobbyCommand implements CommandExecutor {
         if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
             String perm = "beaconlabslobby.reload";
             if (!sender.hasPermission(perm)) {
-                plugin.sendMessage(sender, ChatColor.RED + "You do not have permission to reload the config.");
+                plugin.sendMessage(sender, "<red>You do not have permission to reload the config.</red>");
                 return true;
             }
 
@@ -28,12 +28,12 @@ public class LabsLobbyCommand implements CommandExecutor {
             plugin.loadConfig();
             plugin.loadSpawnLocation();
             plugin.reapplyLobbyItemsToAllPlayers();
+            plugin.getNpcManager().reloadNpcConfig();
 
-            plugin.sendMessage(sender, ChatColor.GREEN + "Configuration reloaded.");
+            plugin.sendMessage(sender, "<green>Configuration reloaded.</green>");
             return true;
         } else {
-            plugin.sendMessage(sender, ChatColor.RED + "BeaconLabsLobby Version " + ChatColor.GOLD + plugin.getVersion() + ChatColor.RED + " by ItsBeacon");
-            //sender.sendMessage(ChatColor.GRAY + "Use " + ChatColor.YELLOW + "/labslobby reload" + ChatColor.GRAY + " to reload the configuration.");
+            plugin.sendMessage(sender, "<red>BeaconLabsLobby Version </red><gold>" + plugin.getVersion() + "</gold><red> by ItsBeacon</red>");
             return true;
         }
     }
