@@ -20,6 +20,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import net.kyori.adventure.text.format.TextDecoration;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,7 +72,7 @@ public class SelectorCommand implements CommandExecutor, Listener {
         List<PendingOnlineRequest> reqs = pendingOnlineRequests.remove(serverName);
         if (reqs != null) {
             for (PendingOnlineRequest req : reqs) {
-                updateItemLoreStatic(req.inventory, req.slot, req.lore, ChatColor.GREEN + "Online");
+                updateItemLoreStatic(req.inventory, req.slot, req.lore, "<green>Online</green>");
             }
         }
     }
@@ -81,7 +82,7 @@ public class SelectorCommand implements CommandExecutor, Listener {
         List<PendingOnlineRequest> reqs = pendingOnlineRequests.remove(serverName);
         if (reqs != null) {
             for (PendingOnlineRequest req : reqs) {
-                updateItemLoreStatic(req.inventory, req.slot, req.lore, ChatColor.RED + "Offline");
+                updateItemLoreStatic(req.inventory, req.slot, req.lore, "<red>Offline</red>");
             }
         }
     }
@@ -91,7 +92,7 @@ public class SelectorCommand implements CommandExecutor, Listener {
         List<PendingOnlineRequest> reqs = pendingOnlineRequests.remove(serverName);
         if (reqs != null) {
             for (PendingOnlineRequest req : reqs) {
-                updateItemLoreStatic(req.inventory, req.slot, req.lore, ChatColor.RED + "Offline");
+                updateItemLoreStatic(req.inventory, req.slot, req.lore, "<red>Offline</red>");
             }
         }
     }
@@ -102,15 +103,15 @@ public class SelectorCommand implements CommandExecutor, Listener {
         if (item == null) return;
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return;
-        List<String> updatedLore = new ArrayList<>();
+        List<net.kyori.adventure.text.Component> updatedLore = new ArrayList<>();
         for (String line : lore) {
             if (line.contains("%online%")) {
-                updatedLore.add(ChatColor.translateAlternateColorCodes('&', line.replace("%online%", onlineStatus)));
+                updatedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line.replace("%online%", onlineStatus)).decoration(TextDecoration.ITALIC, false));
             } else {
-                updatedLore.add(ChatColor.translateAlternateColorCodes('&', line));
+                updatedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line).decoration(TextDecoration.ITALIC, false));
             }
         }
-        meta.setLore(updatedLore);
+        meta.lore(updatedLore);
         item.setItemMeta(meta);
         inventory.setItem(slot, item);
     }
@@ -154,10 +155,10 @@ public class SelectorCommand implements CommandExecutor, Listener {
             // Determine number of rows and title from config
             int rows = settings.getInt("rows", 3);
             String name = settings.getString("name", "Server Selector");
-            String final_name = ChatColor.translateAlternateColorCodes('&', name);
+            net.kyori.adventure.text.Component title = plugin.getMiniMessage().deserialize(name).decoration(TextDecoration.ITALIC, false);
 
             // Create inventory with specified rows and title
-            this.inventory = Bukkit.createInventory(this, rows * 9, final_name);
+            this.inventory = Bukkit.createInventory(this, rows * 9, title);
 
             // Load server items from config
             loadServerItems();
@@ -191,21 +192,21 @@ public class SelectorCommand implements CommandExecutor, Listener {
                 ItemStack item = new ItemStack(type);
                 ItemMeta meta = item.getItemMeta();
                 if (meta != null) {
-                    meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
+                    meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(name).decoration(TextDecoration.ITALIC, false));
 
                     // Apply color codes and formatting to lore
-                    List<String> formattedLore = new ArrayList<>();
+                    List<net.kyori.adventure.text.Component> formattedLore = new ArrayList<>();
                     boolean hasOnlinePlaceholder = false;
                     for (String line : lore) {
                         if (line.contains("%online%")) {
                             hasOnlinePlaceholder = true;
                             // Temporary placeholder (gray)
-                            formattedLore.add(ChatColor.translateAlternateColorCodes('&', line.replace("%online%", ChatColor.GRAY + "Loading...")));
+                            formattedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line.replace("%online%", "<gray>Loading...</gray>")).decoration(TextDecoration.ITALIC, false));
                         } else {
-                            formattedLore.add(ChatColor.translateAlternateColorCodes('&', line));
+                            formattedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line).decoration(TextDecoration.ITALIC, false));
                         }
                     }
-                    meta.setLore(formattedLore);
+                    meta.lore(formattedLore);
                     item.setItemMeta(meta);
 
                     inventory.setItem(slot, item);
@@ -227,15 +228,15 @@ public class SelectorCommand implements CommandExecutor, Listener {
             if (item == null) return;
             ItemMeta meta = item.getItemMeta();
             if (meta == null) return;
-            List<String> updatedLore = new ArrayList<>();
+            List<net.kyori.adventure.text.Component> updatedLore = new ArrayList<>();
             for (String line : lore) {
                 if (line.contains("%online%")) {
-                    updatedLore.add(ChatColor.translateAlternateColorCodes('&', line.replace("%online%", onlineStatus)));
+                    updatedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line.replace("%online%", onlineStatus)).decoration(TextDecoration.ITALIC, false));
                 } else {
-                    updatedLore.add(ChatColor.translateAlternateColorCodes('&', line));
+                    updatedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line).decoration(TextDecoration.ITALIC, false));
                 }
             }
-            meta.setLore(updatedLore);
+            meta.lore(updatedLore);
             item.setItemMeta(meta);
             inventory.setItem(slot, item);
         }
@@ -301,7 +302,7 @@ public class SelectorCommand implements CommandExecutor, Listener {
             if (itemSection == null) continue;
 
             String name = itemSection.getString("name");
-            if (name != null && ChatColor.translateAlternateColorCodes('&', name).equals(displayName)) {
+            if (name != null && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(name)).equals(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(meta.displayName()))) {
                 return key;
             }
         }
@@ -312,7 +313,7 @@ public class SelectorCommand implements CommandExecutor, Listener {
     // Method to send the player to another server using BungeeCord
     private void sendPlayerToServer(Player player, String serverName) {
         plugin.getLogger().info("Connecting player to server: " + serverName);
-        player.sendMessage(plugin.getPrefix() + "§cYou are being connected to §6" + serverName);
+        plugin.sendMessage(player, "<red>You are being connected to <gold>" + serverName + "</gold></red>");
 
         // Send player to another server
         ByteArrayDataOutput out = ByteStreams.newDataOutput();

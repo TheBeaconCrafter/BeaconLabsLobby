@@ -3,11 +3,16 @@ package org.bcnlab.beaconlabslobby;
 import org.bcnlab.beaconlabslobby.commands.*;
 import org.bcnlab.beaconlabslobby.listeners.BuildListener;
 import org.bcnlab.beaconlabslobby.listeners.LobbyProtectionListener;
+import org.bcnlab.beaconlabslobby.commands.LobbyNPCCommand;
 import org.bcnlab.beaconlabslobby.listeners.PlayerJoinListener;
 import org.bcnlab.beaconlabslobby.managers.BuildManager;
 import org.bcnlab.beaconlabslobby.managers.InventoryListener;
+import org.bcnlab.beaconlabslobby.managers.ItemManager;
+import org.bcnlab.beaconlabslobby.managers.NPCManager;
 import org.bcnlab.beaconlabslobby.commands.PrivateSelectorCommand;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.*;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -21,6 +26,12 @@ import org.bukkit.entity.Animals;
 import org.bukkit.entity.Ambient;
 import org.bukkit.entity.WaterMob;
 
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -28,9 +39,12 @@ import java.util.List;
 public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageListener {
 
     private String pluginPrefix;
-    private String pluginVersion = "1.5";
+    private String pluginVersion = "1.6.0";
     private String noPermsMessage = "&cYou do not have permission to use this command.";
     private BuildManager buildManager;
+    private ItemManager itemManager;
+    private NPCManager npcManager;
+    private MiniMessage miniMessage;
     private Location spawnLocation;
 
     private Integer heightlimitTop;
@@ -40,14 +54,25 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
     private Boolean healOnJoin;
 
     @Override
+    @SuppressWarnings("UnstableApiUsage")
     public void onEnable() {
         // Save the default config if it doesn't exist
         createDefaultConfig();
         // Load the configuration
         loadConfig();
 
-        // Initialize BuildManager
+        // Initialize variables
         buildManager = new BuildManager();
+        itemManager = new ItemManager(this);
+        
+        if (getServer().getPluginManager().getPlugin("FancyNpcs") != null) {
+            npcManager = new NPCManager(this);
+            getLogger().info("FancyNpcs detected, enabling NPC functionality.");
+        } else {
+            getLogger().warning("FancyNpcs not found! NPC functionality will be disabled.");
+        }
+        
+        miniMessage = MiniMessage.miniMessage();
 
         if (getConfig().getBoolean("disable-weather", true)) {
             setDefaultWeather();
@@ -78,15 +103,233 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         BuildListener buildListener = new BuildListener(this, buildManager);
         getServer().getPluginManager().registerEvents(buildListener, this);
 
-        getCommand("selector").setExecutor(new SelectorCommand(this));
-        getCommand("privateselector").setExecutor(new PrivateSelectorCommand(this));
-        getCommand("labslobby").setExecutor(new LabsLobbyCommand(this));
-        getCommand("build").setExecutor(new BuildCommand(this, buildManager));
-        getCommand("spawn").setExecutor(new SpawnCommand(this));
-        getCommand("setspawn").setExecutor(new SetSpawnCommand(this));
-        getCommand("hider").setExecutor(new HiderCommand(this));
-        getCommand("refreshscoreboard").setExecutor(new RefreshScoreboardCommand(this));
-        getCommand("refreshheight").setExecutor(new RefreshHeightCommand(this));
+        // Register commands via LifecycleEvents.COMMANDS (Paper API)
+        SelectorCommand selectorCmd = new SelectorCommand(this);
+        PrivateSelectorCommand privateSelectorCmd = new PrivateSelectorCommand(this);
+        LabsLobbyCommand labsLobbyCmd = new LabsLobbyCommand(this);
+        BuildCommand buildCmd = new BuildCommand(this, buildManager);
+        SpawnCommand spawnCmd = new SpawnCommand(this);
+        SetSpawnCommand setSpawnCmd = new SetSpawnCommand(this);
+        HiderCommand hiderCmd = new HiderCommand(this);
+        LobbyNPCCommand lobbyNpcCmd = npcManager != null ? new LobbyNPCCommand(this) : null;
+        RefreshScoreboardCommand refreshScoreboardCmd = new RefreshScoreboardCommand(this);
+        RefreshHeightCommand refreshHeightCmd = new RefreshHeightCommand(this);
+
+        this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
+            final Commands commands = event.registrar();
+
+            commands.register(
+                Commands.literal("selector")
+                    .executes(ctx -> {
+                        CommandSender sender = ctx.getSource().getSender();
+                        selectorCmd.onCommand(sender, null, "selector", new String[0]);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                    .then(Commands.argument("args", StringArgumentType.greedyString())
+                        .executes(ctx -> {
+                            CommandSender sender = ctx.getSource().getSender();
+                            String argsStr = StringArgumentType.getString(ctx, "args");
+                            String[] args = argsStr.split(" ");
+                            selectorCmd.onCommand(sender, null, "selector", args);
+                            return Command.SINGLE_SUCCESS;
+                        })
+                    )
+                    .build(),
+                "Opens the server selector",
+                List.of()
+            );
+
+            commands.register(
+                Commands.literal("privateselector")
+                    .executes(ctx -> {
+                        CommandSender sender = ctx.getSource().getSender();
+                        privateSelectorCmd.onCommand(sender, null, "privateselector", new String[0]);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                    .then(Commands.argument("args", StringArgumentType.greedyString())
+                        .executes(ctx -> {
+                            CommandSender sender = ctx.getSource().getSender();
+                            String argsStr = StringArgumentType.getString(ctx, "args");
+                            String[] args = argsStr.split(" ");
+                            privateSelectorCmd.onCommand(sender, null, "privateselector", args);
+                            return Command.SINGLE_SUCCESS;
+                        })
+                    )
+                    .build(),
+                "Opens the private server selector",
+                List.of()
+            );
+
+            commands.register(
+                Commands.literal("labslobby")
+                    .executes(ctx -> {
+                        CommandSender sender = ctx.getSource().getSender();
+                        labsLobbyCmd.onCommand(sender, null, "labslobby", new String[0]);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                    .then(Commands.argument("args", StringArgumentType.greedyString())
+                        .executes(ctx -> {
+                            CommandSender sender = ctx.getSource().getSender();
+                            String argsStr = StringArgumentType.getString(ctx, "args");
+                            String[] args = argsStr.split(" ");
+                            labsLobbyCmd.onCommand(sender, null, "labslobby", args);
+                            return Command.SINGLE_SUCCESS;
+                        })
+                    )
+                    .build(),
+                "Returns info about the plugin",
+                List.of()
+            );
+
+            commands.register(
+                Commands.literal("build")
+                    .executes(ctx -> {
+                        CommandSender sender = ctx.getSource().getSender();
+                        buildCmd.onCommand(sender, null, "build", new String[0]);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                    .then(Commands.argument("args", StringArgumentType.greedyString())
+                        .executes(ctx -> {
+                            CommandSender sender = ctx.getSource().getSender();
+                            String argsStr = StringArgumentType.getString(ctx, "args");
+                            String[] args = argsStr.split(" ");
+                            buildCmd.onCommand(sender, null, "build", args);
+                            return Command.SINGLE_SUCCESS;
+                        })
+                    )
+                    .build(),
+                "Allows you to build",
+                List.of()
+            );
+
+            commands.register(
+                Commands.literal("spawn")
+                    .executes(ctx -> {
+                        CommandSender sender = ctx.getSource().getSender();
+                        spawnCmd.onCommand(sender, null, "spawn", new String[0]);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                    .then(Commands.argument("args", StringArgumentType.greedyString())
+                        .executes(ctx -> {
+                            CommandSender sender = ctx.getSource().getSender();
+                            String argsStr = StringArgumentType.getString(ctx, "args");
+                            String[] args = argsStr.split(" ");
+                            spawnCmd.onCommand(sender, null, "spawn", args);
+                            return Command.SINGLE_SUCCESS;
+                        })
+                    )
+                    .build(),
+                "Teleports the sender to spawn",
+                List.of()
+            );
+
+            commands.register(
+                Commands.literal("setspawn")
+                    .executes(ctx -> {
+                        CommandSender sender = ctx.getSource().getSender();
+                        setSpawnCmd.onCommand(sender, null, "setspawn", new String[0]);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                    .then(Commands.argument("args", StringArgumentType.greedyString())
+                        .executes(ctx -> {
+                            CommandSender sender = ctx.getSource().getSender();
+                            String argsStr = StringArgumentType.getString(ctx, "args");
+                            String[] args = argsStr.split(" ");
+                            setSpawnCmd.onCommand(sender, null, "setspawn", args);
+                            return Command.SINGLE_SUCCESS;
+                        })
+                    )
+                    .build(),
+                "Sets the spawn for the lobby",
+                List.of()
+            );
+
+            commands.register(
+                Commands.literal("hider")
+                    .executes(ctx -> {
+                        CommandSender sender = ctx.getSource().getSender();
+                        hiderCmd.onCommand(sender, null, "hider", new String[0]);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                    .then(Commands.argument("args", StringArgumentType.greedyString())
+                        .executes(ctx -> {
+                            CommandSender sender = ctx.getSource().getSender();
+                            String argsStr = StringArgumentType.getString(ctx, "args");
+                            String[] args = argsStr.split(" ");
+                            hiderCmd.onCommand(sender, null, "hider", args);
+                            return Command.SINGLE_SUCCESS;
+                        })
+                    )
+                    .build(),
+                "Opens a GUI to hide other players",
+                List.of()
+            );
+
+            if (lobbyNpcCmd != null) {
+                commands.register(
+                    Commands.literal("lobbynpc")
+                        .executes(ctx -> {
+                            CommandSender sender = ctx.getSource().getSender();
+                            lobbyNpcCmd.onCommand(sender, null, "lobbynpc", new String[0]);
+                            return Command.SINGLE_SUCCESS;
+                        })
+                        .then(Commands.argument("args", StringArgumentType.greedyString())
+                            .executes(ctx -> {
+                                CommandSender sender = ctx.getSource().getSender();
+                                String argsStr = StringArgumentType.getString(ctx, "args");
+                                String[] args = argsStr.split(" ");
+                                lobbyNpcCmd.onCommand(sender, null, "lobbynpc", args);
+                                return Command.SINGLE_SUCCESS;
+                            })
+                        )
+                        .build(),
+                    "Manages FancyNpcs",
+                    List.of()
+                );
+            }
+
+            commands.register(
+                Commands.literal("refreshscoreboard")
+                    .executes(ctx -> {
+                        CommandSender sender = ctx.getSource().getSender();
+                        refreshScoreboardCmd.onCommand(sender, null, "refreshscoreboard", new String[0]);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                    .then(Commands.argument("args", StringArgumentType.greedyString())
+                        .executes(ctx -> {
+                            CommandSender sender = ctx.getSource().getSender();
+                            String argsStr = StringArgumentType.getString(ctx, "args");
+                            String[] args = argsStr.split(" ");
+                            refreshScoreboardCmd.onCommand(sender, null, "refreshscoreboard", args);
+                            return Command.SINGLE_SUCCESS;
+                        })
+                    )
+                    .build(),
+                "Refresh the scoreboard",
+                List.of("refreshsb", "resb")
+            );
+
+            commands.register(
+                Commands.literal("refreshheight")
+                    .executes(ctx -> {
+                        CommandSender sender = ctx.getSource().getSender();
+                        refreshHeightCmd.onCommand(sender, null, "refreshheight", new String[0]);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                    .then(Commands.argument("args", StringArgumentType.greedyString())
+                        .executes(ctx -> {
+                            CommandSender sender = ctx.getSource().getSender();
+                            String argsStr = StringArgumentType.getString(ctx, "args");
+                            String[] args = argsStr.split(" ");
+                            refreshHeightCmd.onCommand(sender, null, "refreshheight", args);
+                            return Command.SINGLE_SUCCESS;
+                        })
+                    )
+                    .build(),
+                "Refresh the height limit configuration",
+                List.of("refreshh", "reh")
+            );
+        });
 
         getLogger().info("BeaconLabs Lobby was enabled!");
     }
@@ -100,6 +343,11 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         return ChatColor.translateAlternateColorCodes('&', pluginPrefix);
     }
 
+    public void sendMessage(CommandSender sender, String miniMessageString) {
+        String prefix = getConfig().getString("plugin-prefix", "<gradient:gold:yellow>BeaconLabs</gradient> <dark_gray>»</dark_gray> ");
+        sender.sendMessage(miniMessage.deserialize(prefix + miniMessageString));
+    }
+
     public String getVersion() {
         return pluginVersion;
     }
@@ -107,7 +355,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
     private void createDefaultConfig() {
         FileConfiguration config = getConfig();
         config.options().copyDefaults(true);
-        config.addDefault("plugin-prefix", "&6BeaconLabs &8» ");
+        config.addDefault("plugin-prefix", "<gradient:gold:yellow>BeaconLabs</gradient> <dark_gray>»</dark_gray> ");
         config.addDefault("disable-damage", true);
         config.addDefault("disable-mob-spawning", true);
         config.addDefault("disable-food-level-change", true);
@@ -122,9 +370,9 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
 
         if (!config.contains("server-selector.settings")) {
             ConfigurationSection settingsSection = config.createSection("server-selector.settings");
-            settingsSection.set("name", "&6BeaconLabs &8» &4Server Selector");
+            settingsSection.set("name", "<gold>Play</gold> <gray>(Right Click)</gray>");
             settingsSection.set("type", Material.COMPASS.toString());
-            settingsSection.set("lore", Arrays.asList("&aLeft-click to select a server", "&4You can find all your favorite gamemodes here!"));
+            settingsSection.set("lore", Arrays.asList("<green>Left-click to select a server</green>", "<gray>Find all your favorite gamemodes here!</gray>"));
             settingsSection.set("rows", 3);
             settingsSection.set("slot", 2);
         }
@@ -135,24 +383,24 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
 
             // Default item configuration
             ConfigurationSection defaultItem = config.createSection("server-selector.items.server1");
-            defaultItem.set("name", "&2Server 1");
+            defaultItem.set("name", "<dark_green><bold>Server 1</bold></dark_green>");
             defaultItem.set("type", Material.COMPASS.toString());
-            defaultItem.set("lore", Arrays.asList("Left-click to select a server", "&4You can even use color codes!"));
+            defaultItem.set("lore", Arrays.asList("<green>Left-click to select a server</green>", "<red>You can use minimessage codes!</red>"));
             defaultItem.set("slot", 11);
             defaultItem.set("server", "server_in_bungeeconfig");
 
             // Additional server selector items
             ConfigurationSection item1 = config.createSection("server-selector.items.server3");
-            item1.set("name", "&6Server 2");
+            item1.set("name", "<gold><bold>Server 2</bold></gold>");
             item1.set("type", Material.DIAMOND.toString());
-            item1.set("lore", Arrays.asList("&7Click to join Server 1", "&eThis is a lore line for Server 1"));
+            item1.set("lore", Arrays.asList("<gray>Click to join Server 1</gray>", "<yellow>This is a lore line for Server 1</yellow>"));
             item1.set("slot", 13);
             item1.set("server", "server2");
 
             ConfigurationSection item2 = config.createSection("server-selector.items.server2");
-            item2.set("name", "&4Server 3");
+            item2.set("name", "<dark_red><bold>Server 3</bold></dark_red>");
             item2.set("type", Material.GOLD_INGOT.toString());
-            item2.set("lore", Arrays.asList("&7Click to join Server 2", "&eThis is a lore line for Server 2"));
+            item2.set("lore", Arrays.asList("<gray>Click to join Server 2</gray>", "<yellow>This is a lore line for Server 2</yellow>"));
             item2.set("slot", 15);
             item2.set("server", "server3");
         }
@@ -166,9 +414,9 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         }
         if (!config.contains("private-server-selector.settings")) {
             ConfigurationSection privateSettings = config.createSection("private-server-selector.settings");
-            privateSettings.set("name", "&6BeaconLabs &8» &5Private Selector");
+            privateSettings.set("name", "<dark_purple>Private Selector</dark_purple> <gray>(Right Click)</gray>");
             privateSettings.set("type", Material.NETHER_STAR.toString());
-            privateSettings.set("lore", Arrays.asList("&dPrivate server selector", "&7Only visible with permission"));
+            privateSettings.set("lore", Arrays.asList("<light_purple>Private server selector</light_purple>", "<gray>Only visible with permission</gray>"));
             privateSettings.set("rows", 3);
             privateSettings.set("slot", 4);
         }
@@ -177,9 +425,9 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
             config.set("private-server-selector.items", new ArrayList<>());
 
             ConfigurationSection privateItem = config.createSection("private-server-selector.items.private1");
-            privateItem.set("name", "&5Private Server 1");
+            privateItem.set("name", "<dark_purple><bold>Private Server 1</bold></dark_purple>");
             privateItem.set("type", Material.NETHER_STAR.toString());
-            privateItem.set("lore", Arrays.asList("&7Click to join", "&eThis server is private", "&7Status: %online%"));
+            privateItem.set("lore", Arrays.asList("<gray>Click to join</gray>", "<yellow>This server is private</yellow>", "<gray>Status: %online%</gray>"));
             privateItem.set("slot", 11);
             privateItem.set("server", "private_server_1");
         }
@@ -187,10 +435,28 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         // Set default values for player hider item
         if (!config.contains("player-hider.settings")) {
             ConfigurationSection settingsSection = config.createSection("player-hider.settings");
-            settingsSection.set("name", "&6BeaconLabs &8» &aPlayer Hider");
+            settingsSection.set("name", "<green>Visibility</green> <gray>(Right Click)</gray>");
             settingsSection.set("type", Material.BLAZE_ROD.toString());
-            settingsSection.set("lore", Arrays.asList("&aLeft-click to hide players", "&4You can modify your player visibility settings here."));
+            settingsSection.set("lore", Arrays.asList("<green>Left-click to toggle player visibility</green>"));
             settingsSection.set("slot", 6);
+        }
+
+        // Settings item (SettingsManager proxy fallback or UI)
+        if (!config.contains("settings.settings")) {
+            ConfigurationSection settingsSection = config.createSection("settings.settings");
+            settingsSection.set("name", "<gray>Settings</gray> <gray>(Right Click)</gray>");
+            settingsSection.set("type", Material.COMPARATOR.toString());
+            settingsSection.set("lore", Arrays.asList("<yellow>Left-click to configure your settings</yellow>"));
+            settingsSection.set("slot", 8);
+        }
+
+        // Friends item
+        if (!config.contains("friends.settings")) {
+            ConfigurationSection settingsSection = config.createSection("friends.settings");
+            settingsSection.set("name", "<aqua>Friends</aqua> <gray>(Right Click)</gray>");
+            settingsSection.set("type", Material.PLAYER_HEAD.toString());
+            settingsSection.set("lore", Arrays.asList("<aqua>Left-click to open friends list</aqua>"));
+            settingsSection.set("slot", 7);
         }
 
         // Save the updated configuration
@@ -201,7 +467,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
     public void loadConfig() {
         FileConfiguration config = getConfig();
 
-        pluginPrefix = config.getString("plugin-prefix", "&6BeaconLabs &8» ");
+        pluginPrefix = config.getString("plugin-prefix", "<gradient:gold:yellow>BeaconLabs</gradient> <dark_gray>»</dark_gray> ");
 
         healOnJoin = config.getBoolean("heal-on-join", true);
         returnToSpawn = config.getBoolean("return-spawn-heightlimit", true);
@@ -228,6 +494,22 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         reloadConfig();
         heightlimitTop = getConfig().getInt("heightlimit-top", 256);
         heightlimitBottom = getConfig().getInt("heightlimit-bottom", 10);
+    }
+
+    public BuildManager getBuildManager() {
+        return buildManager;
+    }
+
+    public ItemManager getItemManager() {
+        return itemManager;
+    }
+
+    public NPCManager getNpcManager() {
+        return npcManager;
+    }
+
+    public MiniMessage getMiniMessage() {
+        return miniMessage;
     }
 
     public Boolean getReturnToSpawn () {

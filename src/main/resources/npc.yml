@@ -1,1 +1,21 @@
+# NPC Configuration File
+# 
+# Map NPC names to specific actions when a player interacts with them.
+# 
+# Available actions:
+# - COMMAND: Executes a command for the player.
+#
+# Examples:
+#
+# npcs:
+#   ServerSelectorNPC:
+#     action: "COMMAND"
+#     value: "selector"
+#   FriendsNPC:
+#     action: "COMMAND"
+#     value: "friends"
+#   SettingsNPC:
+#     action: "COMMAND"
+#     value: "settings"
+
 npcs: {}

@@ -20,6 +20,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.List;
+import net.kyori.adventure.text.format.TextDecoration;
 
 public class HiderCommand implements CommandExecutor, Listener {
 
@@ -57,17 +58,14 @@ public class HiderCommand implements CommandExecutor, Listener {
             FileConfiguration config = plugin.getConfig();
             ConfigurationSection settings = config.getConfigurationSection("player-hider.settings");
 
-            String title = settings.getString("name", "&6BeaconLabs &8» &aPlayer Hider");
-            List<String> lore = settings.getStringList("lore");
-            int slot = settings.getInt("slot", 0);
-
-            this.inventory = Bukkit.createInventory(this, 9, ChatColor.translateAlternateColorCodes('&', title));
+            String title = settings.getString("name", "<gold>BeaconLabs</gold> <dark_gray>»</dark_gray> <green>Player Hider</green>");
+            this.inventory = Bukkit.createInventory(this, 27, net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(title).decoration(TextDecoration.ITALIC, false));
 
             // Create red dye (off) item
             ItemStack redDye = new ItemStack(Material.REDSTONE);
             ItemMeta redMeta = redDye.getItemMeta();
             if (redMeta != null) {
-                redMeta.setDisplayName(ChatColor.RED + "Hide Players");
+                redMeta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Hide Players").decoration(TextDecoration.ITALIC, false));
                 redDye.setItemMeta(redMeta);
             }
             this.inventory.setItem(2, redDye);
@@ -76,7 +74,7 @@ public class HiderCommand implements CommandExecutor, Listener {
             ItemStack greenDye = new ItemStack(Material.EMERALD);
             ItemMeta greenMeta = greenDye.getItemMeta();
             if (greenMeta != null) {
-                greenMeta.setDisplayName(ChatColor.GREEN + "Show Players");
+                greenMeta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<green>Show Players").decoration(TextDecoration.ITALIC, false));
                 greenDye.setItemMeta(greenMeta);
             }
             this.inventory.setItem(6, greenDye);
@@ -106,12 +104,12 @@ public class HiderCommand implements CommandExecutor, Listener {
                 return;
             }
 
-            if (meta.getDisplayName().equals(ChatColor.RED + "Hide Players")) {
+            if (meta.hasDisplayName() && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(meta.displayName()).equals("Hide Players")) {
                 togglePlayerVisibility(player, true);
-                player.sendMessage(plugin.getPrefix() + ChatColor.RED + "You are now hiding other players.");
-            } else if (meta.getDisplayName().equals(ChatColor.GREEN + "Show Players")) {
+                plugin.sendMessage(player, "<red>You are now hiding other players.</red>");
+            } else if (meta.hasDisplayName() && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(meta.displayName()).equals("Show Players")) {
                 togglePlayerVisibility(player, false);
-                player.sendMessage(plugin.getPrefix() + ChatColor.GREEN + "You are now showing other players.");
+                plugin.sendMessage(player, "<green>You are now showing other players.</green>");
             }
 
             // Close the inventory after clicking

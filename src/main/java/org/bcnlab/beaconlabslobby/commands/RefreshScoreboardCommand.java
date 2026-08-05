@@ -13,7 +13,6 @@ public class RefreshScoreboardCommand implements CommandExecutor {
 
     public RefreshScoreboardCommand(BeaconLabsLobby plugin) {
         this.plugin = plugin;
-        plugin.getCommand("refreshsb").setExecutor(this);
     }
 
     @Override

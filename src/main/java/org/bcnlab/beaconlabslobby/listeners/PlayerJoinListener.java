@@ -37,15 +37,17 @@ public class PlayerJoinListener implements Listener {
 
         clearInventory(player);
 
-        // Give configurable items on join
-        giveServerSelectorItem(player);
-        givePrivateServerSelectorItem(player);
-        givePlayerHiderItem(player);
+        // Give configurable items on join via ItemManager
+        plugin.getItemManager().giveJoinItems(player);
 
         //Scoreboard
         ScoreboardUtil scoreboardUtil = new ScoreboardUtil(player, plugin);
         scoreboardUtil.updateScoreboard();
         scoreboardUtil.setPlayerScoreboard();
+
+        // Sound Design
+        player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+        player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_CHIME, 1.0f, 1.5f);
 
         if(plugin.getHealOnJoin()) {
             player.setHealth(20.0);
@@ -72,195 +74,36 @@ public class PlayerJoinListener implements Listener {
         player.getInventory().clear(); // Clear the player's entire inventory
     }
 
-    private void giveServerSelectorItem(Player player) {
-        FileConfiguration config = plugin.getConfig();
-
-        // Check if the configuration section for items exists
-        if (config.contains("server-selector.items")) {
-            ConfigurationSection itemConfig = config.getConfigurationSection("server-selector.settings");
-
-            // Get item details from configuration
-            String itemName = itemConfig.getString("name", "Server Selector");
-            itemName = ChatColor.translateAlternateColorCodes('&', itemName);
-            Material itemType = Material.valueOf(itemConfig.getString("type", "COMPASS"));
-            List<String> itemLore = itemConfig.getStringList("lore");
-            int itemSlot = itemConfig.getInt("slot", 2);
-
-            // Create the item stack
-            ItemStack item = new ItemStack(itemType);
-            ItemMeta meta = item.getItemMeta();
-            if (meta != null) {
-                meta.setDisplayName(itemName);
-                // Translate lore color codes
-                List<String> translatedLore = new ArrayList<>();
-                for (String line : itemLore) {
-                    String lore_color = ChatColor.translateAlternateColorCodes('&', line);
-                    translatedLore.add(lore_color);
-                }
-                meta.setLore(translatedLore);
-                item.setItemMeta(meta);
-            }
-
-            // Give the item to the player
-            player.getInventory().setItem(itemSlot, item);
-        } else {
-            plugin.getLogger().warning("Configuration for server selector item not found!");
-        }
-    }
-
-    private void givePrivateServerSelectorItem(Player player) {
-        FileConfiguration config = plugin.getConfig();
-
-        if (!config.getBoolean("private-server-selector.enabled", false)) {
-            return;
-        }
-
-        String permission = config.getString("private-server-selector.permission", "beaconlabslobby.privateselector");
-        if (permission != null && !permission.isEmpty() && !player.hasPermission(permission)) {
-            return;
-        }
-
-        if (config.contains("private-server-selector.settings")) {
-            ConfigurationSection itemConfig = config.getConfigurationSection("private-server-selector.settings");
-
-            String itemName = itemConfig.getString("name", "Private Selector");
-            itemName = ChatColor.translateAlternateColorCodes('&', itemName);
-            String typeName = itemConfig.getString("type", "NETHER_STAR");
-            Material itemType = Material.matchMaterial(typeName);
-            if (itemType == null) {
-                itemType = Material.NETHER_STAR;
-            }
-
-            List<String> itemLore = itemConfig.getStringList("lore");
-            int itemSlot = itemConfig.getInt("slot", 4);
-
-            ItemStack item = new ItemStack(itemType);
-            ItemMeta meta = item.getItemMeta();
-            if (meta != null) {
-                meta.setDisplayName(itemName);
-                List<String> translatedLore = new ArrayList<>();
-                for (String line : itemLore) {
-                    translatedLore.add(ChatColor.translateAlternateColorCodes('&', line));
-                }
-                meta.setLore(translatedLore);
-                item.setItemMeta(meta);
-            }
-
-            player.getInventory().setItem(itemSlot, item);
-        }
-    }
-
-    private void givePlayerHiderItem(Player player) {
-        FileConfiguration config = plugin.getConfig();
-
-        // Check if the configuration section for items exists
-        if (config.contains("player-hider.settings")) {
-            ConfigurationSection itemConfig = config.getConfigurationSection("player-hider.settings");
-
-            // Get item details from configuration
-            String itemName = itemConfig.getString("name", "Server Selector");
-            itemName = ChatColor.translateAlternateColorCodes('&', itemName);
-            Material itemType = Material.valueOf(itemConfig.getString("type", "BLAZRE_ROD"));
-            List<String> itemLore = itemConfig.getStringList("lore");
-            int itemSlot = itemConfig.getInt("slot", 6);
-
-            // Create the item stack
-            ItemStack item = new ItemStack(itemType);
-            ItemMeta meta = item.getItemMeta();
-            if (meta != null) {
-                meta.setDisplayName(itemName);
-                // Translate lore color codes
-                List<String> translatedLore = new ArrayList<>();
-                for (String line : itemLore) {
-                    String lore_color = ChatColor.translateAlternateColorCodes('&', line);
-                    translatedLore.add(lore_color);
-                }
-                meta.setLore(translatedLore);
-                item.setItemMeta(meta);
-            }
-
-            // Give the item to the player
-            player.getInventory().setItem(itemSlot, item);
-        } else {
-            plugin.getLogger().warning("Configuration for server selector item not found!");
-        }
-    }
-
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         ItemStack item = event.getItem();
-        if (item != null && isServerSelectorItem(item)) {
-            event.setCancelled(true); // Prevent normal item use
-
-            Player player = event.getPlayer();
-            player.performCommand("selector");
-        } else if (item != null && isPrivateServerSelectorItem(item)) {
+        String actionId = plugin.getItemManager().getActionId(item);
+        
+        if (actionId != null) {
             event.setCancelled(true);
-
             Player player = event.getPlayer();
-            player.performCommand("privateselector");
-        } else if (item != null && isHiderItem(item)) {
-            event.setCancelled(true); // Prevent normal item use
-
-            Player player = event.getPlayer();
-            player.performCommand("hider");
-        }
-    }
-
-    private boolean isServerSelectorItem(ItemStack item) {
-        FileConfiguration config = plugin.getConfig();
-        if (config.contains("server-selector.settings")) {
-            String itemType = config.getString("server-selector.settings.type", "COMPASS");
-            Material expectedType = Material.matchMaterial(itemType);
-            if (expectedType != null && item.getType() == expectedType) {
-                ItemMeta meta = item.getItemMeta();
-                if (meta != null) {
-                    String expectedName = config.getString("server-selector.settings.name", "Server Selector");
-                    expectedName = ChatColor.translateAlternateColorCodes('&', expectedName); // Translate color codes
-                    String displayName = meta.getDisplayName();
-                    displayName = ChatColor.translateAlternateColorCodes('&', displayName); // Translate color codes
-                    return displayName.equals(expectedName);
-                }
+            
+            // Sound Design for interacting
+            player.playSound(player.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 1.0f, 1.2f);
+            
+            switch (actionId) {
+                case "selector":
+                    player.performCommand("selector");
+                    break;
+                case "privateselector":
+                    player.performCommand("privateselector");
+                    break;
+                case "hider":
+                    player.performCommand("hider");
+                    break;
+                case "settings":
+                    // Use player.chat() so that it acts as a real command input, which allows Velocity or Link plugin to catch it
+                    player.chat("/settings");
+                    break;
+                case "friends":
+                    player.chat("/friends");
+                    break;
             }
         }
-        return false;
-    }
-
-    private boolean isHiderItem(ItemStack item) {
-        FileConfiguration config = plugin.getConfig();
-        if (config.contains("player-hider.settings")) {
-            String itemType = config.getString("player-hider.settings.type", "BLAZE_ROD");
-            Material expectedType = Material.matchMaterial(itemType);
-            if (expectedType != null && item.getType() == expectedType) {
-                ItemMeta meta = item.getItemMeta();
-                if (meta != null) {
-                    String expectedName = config.getString("player-hider.settings.name", "Player Hider");
-                    expectedName = ChatColor.translateAlternateColorCodes('&', expectedName); // Translate color codes
-                    String displayName = meta.getDisplayName();
-                    displayName = ChatColor.translateAlternateColorCodes('&', displayName); // Translate color codes
-                    return displayName.equals(expectedName);
-                }
-            }
-        }
-        return false;
-    }
-
-    private boolean isPrivateServerSelectorItem(ItemStack item) {
-        FileConfiguration config = plugin.getConfig();
-        if (config.contains("private-server-selector.settings")) {
-            String itemType = config.getString("private-server-selector.settings.type", "NETHER_STAR");
-            Material expectedType = Material.matchMaterial(itemType);
-            if (expectedType != null && item.getType() == expectedType) {
-                ItemMeta meta = item.getItemMeta();
-                if (meta != null) {
-                    String expectedName = config.getString("private-server-selector.settings.name", "Private Selector");
-                    expectedName = ChatColor.translateAlternateColorCodes('&', expectedName);
-                    String displayName = meta.getDisplayName();
-                    displayName = ChatColor.translateAlternateColorCodes('&', displayName);
-                    return displayName.equals(expectedName);
-                }
-            }
-        }
-        return false;
     }
 }

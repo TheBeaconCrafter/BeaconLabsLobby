@@ -69,9 +69,9 @@ public class PrivateSelectorCommand implements CommandExecutor, Listener {
 
             int rows = settings != null ? settings.getInt("rows", 3) : 3;
             String name = settings != null ? settings.getString("name", "Private Selector") : "Private Selector";
-            String finalName = ChatColor.translateAlternateColorCodes('&', name);
+            net.kyori.adventure.text.Component title = plugin.getMiniMessage().deserialize(name).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false);
 
-            this.inventory = Bukkit.createInventory(this, rows * 9, finalName);
+            this.inventory = Bukkit.createInventory(this, rows * 9, title);
 
             loadServerItems(player);
         }
@@ -104,19 +104,19 @@ public class PrivateSelectorCommand implements CommandExecutor, Listener {
                 ItemStack item = new ItemStack(type);
                 ItemMeta meta = item.getItemMeta();
                 if (meta != null) {
-                    meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
+                    meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(name).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
 
-                    List<String> formattedLore = new ArrayList<>();
+                    List<net.kyori.adventure.text.Component> formattedLore = new ArrayList<>();
                     boolean hasOnlinePlaceholder = false;
                     for (String line : lore) {
                         if (line.contains("%online%")) {
                             hasOnlinePlaceholder = true;
-                            formattedLore.add(ChatColor.translateAlternateColorCodes('&', line.replace("%online%", ChatColor.GRAY + "Loading...")));
+                            formattedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line.replace("%online%", "<gray>Loading...</gray>")).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
                         } else {
-                            formattedLore.add(ChatColor.translateAlternateColorCodes('&', line));
+                            formattedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
                         }
                     }
-                    meta.setLore(formattedLore);
+                    meta.lore(formattedLore);
                     item.setItemMeta(meta);
 
                     inventory.setItem(slot, item);
@@ -186,7 +186,7 @@ public class PrivateSelectorCommand implements CommandExecutor, Listener {
             if (itemSection == null) continue;
 
             String name = itemSection.getString("name");
-            if (name != null && ChatColor.translateAlternateColorCodes('&', name).equals(displayName)) {
+            if (name != null && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(name)).equals(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(meta.displayName()))) {
                 return key;
             }
         }
@@ -196,7 +196,7 @@ public class PrivateSelectorCommand implements CommandExecutor, Listener {
 
     private void sendPlayerToServer(Player player, String serverName) {
         plugin.getLogger().info("Connecting player to private server: " + serverName);
-        player.sendMessage(plugin.getPrefix() + "§cYou are being connected to §5" + serverName);
+        plugin.sendMessage(player, "<red>You are being connected to <dark_purple>" + serverName + "</dark_purple></red>");
 
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
         out.writeUTF("Connect");

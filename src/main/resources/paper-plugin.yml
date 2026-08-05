@@ -1,0 +1,17 @@
+name: BeaconLabsLobby
+version: '${project.version}'
+main: org.bcnlab.beaconlabslobby.BeaconLabsLobby
+api-version: '1.21'
+author: ItsBeacon
+
+dependencies:
+  server:
+    FancyNpcs:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    LuckPerms:
+      load: BEFORE
+      required: false
+      join-classpath: true
+
