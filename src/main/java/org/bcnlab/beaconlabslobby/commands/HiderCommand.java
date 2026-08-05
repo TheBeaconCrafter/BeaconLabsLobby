@@ -61,7 +61,7 @@ public class HiderCommand implements CommandExecutor, Listener {
             String title = settings.getString("name", "<gold>BeaconLabs</gold> <dark_gray>»</dark_gray> <green>Player Hider</green>");
             this.inventory = Bukkit.createInventory(this, 27, net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(title).decoration(TextDecoration.ITALIC, false));
             
-            ItemStack pane = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+            ItemStack pane = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
             ItemMeta paneMeta = pane.getItemMeta();
             if (paneMeta != null) {
                 paneMeta.displayName(net.kyori.adventure.text.Component.text(" "));

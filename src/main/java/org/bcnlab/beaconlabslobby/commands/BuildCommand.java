@@ -34,7 +34,7 @@ public class BuildCommand implements CommandExecutor {
         if (args.length > 0) {
             // Permission check for allowing others to build
             if (!player.hasPermission("beaconlabs.lobby.build.others")) {
-                player.sendMessage(plugin.getPrefix() + "§cYou don't have permission to allow others to build.");
+                plugin.sendMessage(player, "§cYou don't have permission to allow others to build.");
                 return true;
             }
 
@@ -42,28 +42,28 @@ public class BuildCommand implements CommandExecutor {
             if (args.length == 1) {
                 Player target = plugin.getServer().getPlayer(args[0]); // Corrected index from args[1] to args[0]
                 if (target == null) {
-                    player.sendMessage(plugin.getPrefix() + "§cPlayer not found or offline: " + args[0]); // Corrected index from args[1] to args[0]
+                    plugin.sendMessage(player, "§cPlayer not found or offline: " + args[0]); // Corrected index from args[1] to args[0]
                     return true;
                 }
                 UUID targetUUID = target.getUniqueId();
                 if(buildManager.isAllowedToBuild(targetUUID)) {
                     buildManager.disallowBuilding(targetUUID);
                     target.setGameMode(GameMode.ADVENTURE);
-                    player.sendMessage(plugin.getPrefix() + "§cYou disallowed " + target.getName() + " to build.");
-                    target.sendMessage(plugin.getPrefix() + "§cYou are no longer allowed to build.");
+                    plugin.sendMessage(player, "§cYou disallowed " + target.getName() + " to build.");
+                    plugin.sendMessage(target, "§cYou are no longer allowed to build.");
                 } else {
                     buildManager.allowBuilding(targetUUID);
                     target.setGameMode(GameMode.CREATIVE);
-                    player.sendMessage(plugin.getPrefix() + "§aYou allowed " + target.getName() + " to build.");
-                    target.sendMessage(plugin.getPrefix() + "§aYou are now allowed to build.");
+                    plugin.sendMessage(player, "§aYou allowed " + target.getName() + " to build.");
+                    plugin.sendMessage(target, "§aYou are now allowed to build.");
                 }
             } else {
-                player.sendMessage(plugin.getPrefix() + "§cUsage: /build <player>");
+                plugin.sendMessage(player, "§cUsage: /build <player>");
             }
         } else {
             // Permission check for self building
             if (!player.hasPermission("beaconlabs.lobby.build.self")) {
-                player.sendMessage(plugin.getPrefix() + "§cYou don't have permission to toggle your build status.");
+                plugin.sendMessage(player, "§cYou don't have permission to toggle your build status.");
                 return true;
             }
 
@@ -71,11 +71,11 @@ public class BuildCommand implements CommandExecutor {
             if (buildManager.isAllowedToBuild(playerUUID)) {
                 buildManager.disallowBuilding(playerUUID);
                 player.setGameMode(GameMode.ADVENTURE);
-                player.sendMessage(plugin.getPrefix() + "§cBuilding is now disabled for yourself.");
+                plugin.sendMessage(player, "§cBuilding is now disabled for yourself.");
             } else {
                 buildManager.allowBuilding(playerUUID);
                 player.setGameMode(GameMode.CREATIVE);
-                player.sendMessage(plugin.getPrefix() + "§aBuilding is now enabled for yourself.");
+                plugin.sendMessage(player, "§aBuilding is now enabled for yourself.");
             }
         }
 

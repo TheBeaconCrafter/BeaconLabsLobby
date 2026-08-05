@@ -25,7 +25,7 @@ public class SetSpawnCommand implements CommandExecutor {
 
         // Check permission
         if (!player.hasPermission("beaconlabs.lobby.setspawn")) {
-            player.sendMessage(plugin.getPrefix() + "§cYou do not have permission to use this command.");
+            plugin.sendMessage(player, "§cYou do not have permission to use this command.");
             return true;
         }
 
@@ -34,7 +34,7 @@ public class SetSpawnCommand implements CommandExecutor {
         plugin.getConfig().set("spawn", plugin.serializeLocation(player.getLocation()));
         plugin.saveConfig();
 
-        player.sendMessage(plugin.getPrefix() + "§aSpawn location set!");
+        plugin.sendMessage(player, "§aSpawn location set!");
 
         return true;
     }

@@ -26,9 +26,9 @@ public class SpawnCommand implements CommandExecutor {
         // Retrieve spawn location from config
         if (plugin.getConfig().contains("spawn")) {
             player.teleport(plugin.getSpawnLocation());
-            player.sendMessage(plugin.getPrefix() + "§aTeleported to spawn!");
+            plugin.sendMessage(player, "§aTeleported to spawn!");
         } else {
-            player.sendMessage(plugin.getPrefix() + "$cSpawn location is not set.");
+            plugin.sendMessage(player, "$cSpawn location is not set.");
         }
 
         return true;

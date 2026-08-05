@@ -44,13 +44,13 @@ public class PrivateSelectorCommand implements CommandExecutor, Listener {
 
         FileConfiguration config = plugin.getConfig();
         if (!config.getBoolean("private-server-selector.enabled", false)) {
-            player.sendMessage(plugin.getPrefix() + ChatColor.RED + "Private selector is disabled.");
+            plugin.sendMessage(player, ChatColor.RED + "Private selector is disabled.");
             return true;
         }
 
         String permission = config.getString("private-server-selector.permission", "beaconlabslobby.privateselector");
         if (permission != null && !permission.isEmpty() && !player.hasPermission(permission)) {
-            player.sendMessage(plugin.getPrefix() + ChatColor.RED + "You do not have permission to use this selector.");
+            plugin.sendMessage(player, ChatColor.RED + "You do not have permission to use this selector.");
             return true;
         }
 

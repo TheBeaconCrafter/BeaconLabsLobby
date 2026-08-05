@@ -17,12 +17,12 @@ public class RefreshHeightCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String s, String[] strings) {
         if(sender.hasPermission("beaconlabs.lobby.refreshheight")) {
             plugin.reloadHeightLimits();
-            sender.sendMessage(plugin.getPrefix() + "§aHeight configuration refreshed!");
-            sender.sendMessage(plugin.getPrefix() + "§7Top limit: §e" + plugin.getHeightlimitTop() + " §7blocks");
-            sender.sendMessage(plugin.getPrefix() + "§7Bottom limit: §e" + plugin.getHeightlimitBottom() + " §7blocks");
+            plugin.sendMessage(sender, "§aHeight configuration refreshed!");
+            plugin.sendMessage(sender, "§7Top limit: §e" + plugin.getHeightlimitTop() + " §7blocks");
+            plugin.sendMessage(sender, "§7Bottom limit: §e" + plugin.getHeightlimitBottom() + " §7blocks");
             return true;
         } else {
-            sender.sendMessage(plugin.getPrefix() + "§cYou do not have permission to use this command.");
+            plugin.sendMessage(sender, "§cYou do not have permission to use this command.");
         }
 
         return false;
