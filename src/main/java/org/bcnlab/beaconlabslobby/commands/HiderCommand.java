@@ -34,7 +34,7 @@ public class HiderCommand implements CommandExecutor, Listener {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command!");
+            plugin.sendMessage(sender, "<red>Only players can use this command!</red>");
             return true;
         }
 
@@ -118,10 +118,10 @@ public class HiderCommand implements CommandExecutor, Listener {
 
             if (meta.hasDisplayName() && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(meta.displayName()).equals("Hide Players")) {
                 togglePlayerVisibility(player, true);
-                plugin.sendMessage(player, "<red>You are now hiding other players.</red>");
+                plugin.sendMessage(player, "<gray>You are now <red>hiding</red> other players.</gray>");
             } else if (meta.hasDisplayName() && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(meta.displayName()).equals("Show Players")) {
                 togglePlayerVisibility(player, false);
-                plugin.sendMessage(player, "<green>You are now showing other players.</green>");
+                plugin.sendMessage(player, "<gray>You are now <green>showing</green> other players.</gray>");
             }
 
             // Close the inventory after clicking

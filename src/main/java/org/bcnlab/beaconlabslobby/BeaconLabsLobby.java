@@ -112,12 +112,48 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         });
     }
 
+    public String getPrefix() {
+        return pluginPrefix;
+    }
+
+    public String getPrefix(CommandSender sender) {
+        if (sender instanceof Player) {
+            return getPrefix((Player) sender);
+        }
+        return pluginPrefix;
+    }
+
+    public String getPrefix(Player player) {
+        boolean useLegacy = false;
+        try {
+            if (getServer().getPluginManager().isPluginEnabled("ViaVersion")) {
+                int protocol = com.viaversion.viaversion.api.Via.getAPI().getPlayerVersion(player.getUniqueId());
+                if (protocol < 735) { // 1.16 is 735
+                    useLegacy = true;
+                }
+            }
+        } catch (Exception ignored) {}
+        
+        if (useLegacy) {
+            return net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(
+                miniMessage.deserialize(pluginPrefix)
+            );
+        }
+        return pluginPrefix;
+    }
+
     public void sendMessage(CommandSender sender, String messageString) {
         net.kyori.adventure.text.minimessage.MiniMessage miniMessage = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage();
-        net.kyori.adventure.text.Component prefixComp = miniMessage.deserialize(pluginPrefix);
+        String prefixStr = getPrefix(sender);
+        net.kyori.adventure.text.Component prefixComp;
+        if (prefixStr.contains("§")) {
+             prefixComp = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(prefixStr);
+        } else {
+             prefixComp = miniMessage.deserialize(prefixStr);
+        }
         net.kyori.adventure.text.Component msgComp;
         if (messageString.contains("§") || messageString.contains("&")) {
-            msgComp = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(messageString);
+            msgComp = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(messageString.replace("&", "§"));
         } else {
             msgComp = miniMessage.deserialize(messageString);
         }

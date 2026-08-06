@@ -127,7 +127,7 @@ public class SelectorCommand implements CommandExecutor, Listener {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command!");
+            plugin.sendMessage(sender, "<red>Only players can use this command!</red>");
             return true;
         }
 
@@ -313,7 +313,7 @@ public class SelectorCommand implements CommandExecutor, Listener {
     // Method to send the player to another server using BungeeCord
     private void sendPlayerToServer(Player player, String serverName) {
         plugin.getLogger().info("Connecting player to server: " + serverName);
-        plugin.sendMessage(player, "<red>You are being connected to <gold>" + serverName + "</gold></red>");
+        plugin.sendMessage(player, "<gray>You are being connected to <gold>" + serverName + "</gold></gray>");
 
         // Send player to another server
         ByteArrayDataOutput out = ByteStreams.newDataOutput();

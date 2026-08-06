@@ -67,6 +67,10 @@
           <name>FancyInnovations Repository</name>
           <url>https://repo.fancyinnovations.com/releases</url>
       </repository>
+      <repository>
+          <id>viaversion-repo</id>
+          <url>https://repo.viaversion.com</url>
+      </repository>
   </repositories>
 
   <dependencies>
@@ -88,5 +92,11 @@
           <version>5.4</version>
           <scope>provided</scope>
       </dependency>
-  </dependencies>
+          <dependency>
+            <groupId>com.viaversion</groupId>
+            <artifactId>viaversion-api</artifactId>
+            <version>5.10.0</version>
+            <scope>provided</scope>
+        </dependency>
+</dependencies>
 </project>

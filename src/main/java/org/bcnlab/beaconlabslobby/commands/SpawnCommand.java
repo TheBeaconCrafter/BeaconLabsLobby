@@ -17,7 +17,7 @@ public class SpawnCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command!");
+            plugin.sendMessage(sender, "<red>Only players can use this command!</red>");
             return true;
         }
 
@@ -26,9 +26,9 @@ public class SpawnCommand implements CommandExecutor {
         // Retrieve spawn location from config
         if (plugin.getConfig().contains("spawn")) {
             player.teleport(plugin.getSpawnLocation());
-            plugin.sendMessage(player, "§aTeleported to spawn!");
+            plugin.sendMessage(player, "<gray>Teleported to <gold>spawn</gold>!</gray>");
         } else {
-            plugin.sendMessage(player, "$cSpawn location is not set.");
+            plugin.sendMessage(player, "<red>Spawn location is not set.</red>");
         }
 
         return true;

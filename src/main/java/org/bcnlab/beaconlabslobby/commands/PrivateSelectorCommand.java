@@ -36,7 +36,7 @@ public class PrivateSelectorCommand implements CommandExecutor, Listener {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command!");
+            plugin.sendMessage(sender, "<red>Only players can use this command!</red>");
             return true;
         }
 
@@ -44,13 +44,13 @@ public class PrivateSelectorCommand implements CommandExecutor, Listener {
 
         FileConfiguration config = plugin.getConfig();
         if (!config.getBoolean("private-server-selector.enabled", false)) {
-            plugin.sendMessage(player, ChatColor.RED + "Private selector is disabled.");
+            plugin.sendMessage(player, "<red>Private selector is disabled.</red>");
             return true;
         }
 
         String permission = config.getString("private-server-selector.permission", "beaconlabslobby.privateselector");
         if (permission != null && !permission.isEmpty() && !player.hasPermission(permission)) {
-            plugin.sendMessage(player, ChatColor.RED + "You do not have permission to use this selector.");
+            plugin.sendMessage(player, "<red>You do not have permission to use this selector.</red>");
             return true;
         }
 
@@ -196,7 +196,7 @@ public class PrivateSelectorCommand implements CommandExecutor, Listener {
 
     private void sendPlayerToServer(Player player, String serverName) {
         plugin.getLogger().info("Connecting player to private server: " + serverName);
-        plugin.sendMessage(player, "<red>You are being connected to <dark_purple>" + serverName + "</dark_purple></red>");
+        plugin.sendMessage(player, "<gray>You are being connected to <gold>" + serverName + "</gold></gray>");
 
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
         out.writeUTF("Connect");

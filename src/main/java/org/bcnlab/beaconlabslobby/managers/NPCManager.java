@@ -158,10 +158,12 @@ public class NPCManager implements Listener {
     }
     
     public void listNpcs(Player player) {
-        player.sendMessage(net.kyori.adventure.text.Component.text("--- NPCs ---", net.kyori.adventure.text.format.NamedTextColor.AQUA));
+        player.sendMessage(net.kyori.adventure.text.Component.text("                                                  ").decorate(net.kyori.adventure.text.format.TextDecoration.STRIKETHROUGH).color(net.kyori.adventure.text.format.NamedTextColor.GRAY));
+        plugin.sendMessage(player, "<gold>NPCs:</gold>");
         for (Npc npc : FancyNpcsPlugin.get().getNpcManager().getAllNpcs()) {
-            player.sendMessage(net.kyori.adventure.text.Component.text("- " + npc.getData().getName(), net.kyori.adventure.text.format.NamedTextColor.GRAY));
+            plugin.sendMessage(player, "<gray>- <gold>" + npc.getData().getName() + "</gold></gray>");
         }
+        player.sendMessage(net.kyori.adventure.text.Component.text("                                                  ").decorate(net.kyori.adventure.text.format.TextDecoration.STRIKETHROUGH).color(net.kyori.adventure.text.format.NamedTextColor.GRAY));
     }
     
     public void setSkin(String name, String skinName) {

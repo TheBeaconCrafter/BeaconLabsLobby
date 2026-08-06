@@ -30,10 +30,10 @@ public class LabsLobbyCommand implements CommandExecutor {
             plugin.reapplyLobbyItemsToAllPlayers();
             plugin.getNpcManager().reloadNpcConfig();
 
-            plugin.sendMessage(sender, "<green>Configuration reloaded.</green>");
+            plugin.sendMessage(sender, "<gray>Configuration <gold>reloaded</gold>.</gray>");
             return true;
         } else {
-            plugin.sendMessage(sender, "<red>BeaconLabsLobby Version </red><gold>" + plugin.getVersion() + "</gold><red> by ItsBeacon</red>");
+            plugin.sendMessage(sender, "<gray>BeaconLabsLobby Version <gold>" + plugin.getVersion() + "</gold> by ItsBeacon</gray>");
             return true;
         }
     }

@@ -18,7 +18,7 @@ public class RefreshScoreboardCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("This command can only be executed by a player.");
+            plugin.sendMessage(sender, "<red>This command can only be executed by a player.</red>");
             return true;
         }
 
@@ -27,7 +27,7 @@ public class RefreshScoreboardCommand implements CommandExecutor {
         scoreboardUtil.updateScoreboard();
         scoreboardUtil.setPlayerScoreboard();
 
-        player.sendMessage("Scoreboard refreshed!");
+        plugin.sendMessage(player, "<gray>Scoreboard <gold>refreshed</gold>!</gray>");
 
         return true;
     }

@@ -23,7 +23,7 @@ public class BuildCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("§cOnly players can use this command!");
+            sender.sendMessage("<red>Only players can use this command!</red>");
             return true;
         }
 
@@ -34,7 +34,7 @@ public class BuildCommand implements CommandExecutor {
         if (args.length > 0) {
             // Permission check for allowing others to build
             if (!player.hasPermission("beaconlabs.lobby.build.others")) {
-                plugin.sendMessage(player, "§cYou don't have permission to allow others to build.");
+                plugin.sendMessage(player, "<red>You don't have permission to allow others to build.</red>");
                 return true;
             }
 
@@ -42,28 +42,28 @@ public class BuildCommand implements CommandExecutor {
             if (args.length == 1) {
                 Player target = plugin.getServer().getPlayer(args[0]); // Corrected index from args[1] to args[0]
                 if (target == null) {
-                    plugin.sendMessage(player, "§cPlayer not found or offline: " + args[0]); // Corrected index from args[1] to args[0]
+                    plugin.sendMessage(player, "<gray>Player not found or offline: <gold>" + args[0] + "</gold></gray>"); // Corrected index from args[1] to args[0]
                     return true;
                 }
                 UUID targetUUID = target.getUniqueId();
                 if(buildManager.isAllowedToBuild(targetUUID)) {
                     buildManager.disallowBuilding(targetUUID);
                     target.setGameMode(GameMode.ADVENTURE);
-                    plugin.sendMessage(player, "§cYou disallowed " + target.getName() + " to build.");
-                    plugin.sendMessage(target, "§cYou are no longer allowed to build.");
+                    plugin.sendMessage(player, "<gray>You <red>disallowed</red> <gold>" + target.getName() + "</gold> to build.</gray>");
+                    plugin.sendMessage(target, "<gray>You are <red>no longer allowed</red> to build.</gray>");
                 } else {
                     buildManager.allowBuilding(targetUUID);
                     target.setGameMode(GameMode.CREATIVE);
-                    plugin.sendMessage(player, "§aYou allowed " + target.getName() + " to build.");
-                    plugin.sendMessage(target, "§aYou are now allowed to build.");
+                    plugin.sendMessage(player, "<gray>You <green>allowed</green> <gold>" + target.getName() + "</gold> to build.</gray>");
+                    plugin.sendMessage(target, "<gray>You are <green>now allowed</green> to build.</gray>");
                 }
             } else {
-                plugin.sendMessage(player, "§cUsage: /build <player>");
+                plugin.sendMessage(player, "<gray>Usage: <gold>/build <player></gold></gray>");
             }
         } else {
             // Permission check for self building
             if (!player.hasPermission("beaconlabs.lobby.build.self")) {
-                plugin.sendMessage(player, "§cYou don't have permission to toggle your build status.");
+                plugin.sendMessage(player, "<red>You don't have permission to toggle your build status.</red>");
                 return true;
             }
 
@@ -71,11 +71,11 @@ public class BuildCommand implements CommandExecutor {
             if (buildManager.isAllowedToBuild(playerUUID)) {
                 buildManager.disallowBuilding(playerUUID);
                 player.setGameMode(GameMode.ADVENTURE);
-                plugin.sendMessage(player, "§cBuilding is now disabled for yourself.");
+                plugin.sendMessage(player, "<gray>Building is now <red>disabled</red> for yourself.</gray>");
             } else {
                 buildManager.allowBuilding(playerUUID);
                 player.setGameMode(GameMode.CREATIVE);
-                plugin.sendMessage(player, "§aBuilding is now enabled for yourself.");
+                plugin.sendMessage(player, "<gray>Building is now <green>enabled</green> for yourself.</gray>");
             }
         }
 

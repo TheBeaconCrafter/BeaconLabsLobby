@@ -11,29 +11,25 @@ import net.kyori.adventure.text.format.NamedTextColor;
 public class LobbyNPCCommand implements CommandExecutor, org.bukkit.command.TabCompleter {
 
     private final BeaconLabsLobby plugin;
-    private final net.kyori.adventure.text.Component prefix;
-
     public LobbyNPCCommand(BeaconLabsLobby plugin) {
         this.plugin = plugin;
-        String p = plugin.getConfig().getString("plugin-prefix", "<gold>BeaconLabs</gold> <dark_gray>»</dark_gray> ");
-        this.prefix = plugin.getMiniMessage().deserialize(p);
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command.");
+            plugin.sendMessage(sender, "<red>Only players can use this command.</red>");
             return true;
         }
 
         Player player = (Player) sender;
         if (!player.hasPermission("beaconlabslobby.npc")) {
-            player.sendMessage(plugin.getMiniMessage().deserialize("<red>You do not have permission to use this command.</red>"));
+            plugin.sendMessage(player, "<red>You do not have permission to use this command.</red>");
             return true;
         }
 
         if (args.length == 0) {
-            player.sendMessage(prefix.append(Component.text("Usage: /lobbynpc <create|delete|list|skin>", NamedTextColor.RED)));
+            plugin.sendMessage(player, "<gray>Usage: <gold>/lobbynpc <create|delete|list|skin></gold></gray>");
             return true;
         }
 
@@ -41,35 +37,35 @@ public class LobbyNPCCommand implements CommandExecutor, org.bukkit.command.TabC
         
         if (subCommand.equals("create")) {
             if (args.length < 2) {
-                player.sendMessage(prefix.append(Component.text("Usage: /lobbynpc create <name> [displayName]", NamedTextColor.RED)));
+                plugin.sendMessage(player, "<gray>Usage: <gold>/lobbynpc create <name> [displayName]</gold></gray>");
                 return true;
             }
             String name = args[1];
             String displayName = args.length > 2 ? String.join(" ", args).substring(args[0].length() + args[1].length() + 2) : name;
             
             plugin.getNpcManager().createNpc(player, name, displayName);
-            player.sendMessage(prefix.append(Component.text("Created NPC " + name, NamedTextColor.GREEN)));
+            plugin.sendMessage(player, "<gray>Created NPC <gold>" + name + "</gold></gray>");
         } else if (subCommand.equals("delete")) {
             if (args.length < 2) {
-                player.sendMessage(prefix.append(Component.text("Usage: /lobbynpc delete <name>", NamedTextColor.RED)));
+                plugin.sendMessage(player, "<gray>Usage: <gold>/lobbynpc delete <name></gold></gray>");
                 return true;
             }
             String name = args[1];
             plugin.getNpcManager().deleteNpc(name);
-            player.sendMessage(prefix.append(Component.text("Deleted NPC " + name, NamedTextColor.GREEN)));
+            plugin.sendMessage(player, "<gray>Deleted NPC <gold>" + name + "</gold></gray>");
         } else if (subCommand.equals("list")) {
             plugin.getNpcManager().listNpcs(player);
         } else if (subCommand.equals("skin")) {
             if (args.length < 3) {
-                player.sendMessage(prefix.append(Component.text("Usage: /lobbynpc skin <name> <playerName>", NamedTextColor.RED)));
+                plugin.sendMessage(player, "<gray>Usage: <gold>/lobbynpc skin <name> <playerName></gold></gray>");
                 return true;
             }
             String name = args[1];
             String playerName = args[2];
             plugin.getNpcManager().setSkin(name, playerName);
-            player.sendMessage(prefix.append(Component.text("Set skin for NPC " + name + " to " + playerName, NamedTextColor.GREEN)));
+            plugin.sendMessage(player, "<gray>Set skin for NPC <gold>" + name + "</gold> to <gold>" + playerName + "</gold></gray>");
         } else {
-            player.sendMessage(prefix.append(Component.text("Unknown subcommand.", NamedTextColor.RED)));
+            plugin.sendMessage(player, "<gray>Unknown subcommand.</gray>");
         }
         return true;
     }
