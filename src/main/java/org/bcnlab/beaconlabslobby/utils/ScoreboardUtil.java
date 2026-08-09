@@ -37,6 +37,16 @@ public class ScoreboardUtil {
 
         String rawHeader = plugin.getConfig().getString("Scoreboard.display.header", "<red><bold>Lobby</bold></red>");
         Component header = miniMessage.deserialize(rawHeader);
+        
+        boolean isLegacy = false;
+        if (player.hasMetadata("protocol_version") && player.getMetadata("protocol_version").get(0).asInt() <= 47) {
+            isLegacy = true;
+        }
+        if (isLegacy) {
+            String legacyStr = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.builder().character('§').build().serialize(header);
+            if (legacyStr.length() > 32) legacyStr = legacyStr.substring(0, 32);
+            header = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.builder().character('§').build().deserialize(legacyStr);
+        }
 
         this.objective = scoreboard.registerNewObjective("lobby", Criteria.DUMMY, header);
         this.objective.setDisplaySlot(DisplaySlot.SIDEBAR);
@@ -72,6 +82,17 @@ public class ScoreboardUtil {
         ConfigurationSection displayConfig = config.getConfigurationSection("Scoreboard.display");
 
         if (displayConfig != null) {
+            boolean is1_8 = false;
+            org.bukkit.plugin.Plugin linkPlugin = Bukkit.getPluginManager().getPlugin("BeaconLabsVelocityLink");
+            if (linkPlugin != null) {
+                try {
+                    Object service = linkPlugin.getClass().getMethod("getProtocolVersion", UUID.class).invoke(linkPlugin, player.getUniqueId());
+                    if (service instanceof Integer) {
+                        is1_8 = (Integer) service <= 47;
+                    }
+                } catch (Exception e) {}
+            }
+
             Set<String> keys = displayConfig.getKeys(false);
             Map<Integer, String> messageMap = new HashMap<>();
             for (String key : keys) {
@@ -91,7 +112,9 @@ public class ScoreboardUtil {
 
             for (int i = 0; i < sortedMessages.size(); i++) {
                 Map.Entry<Integer, String> entry = sortedMessages.get(i);
-                String message = entry.getValue().replace("{player}", player.getName());
+                String message = entry.getValue();
+
+                message = message.replace("{player}", player.getName());
                 message = message.replace("{rank}", "<rank>");
                 
                 net.kyori.adventure.text.Component rankComp = net.kyori.adventure.text.Component.empty();
@@ -135,6 +158,17 @@ public class ScoreboardUtil {
                 } else {
                     finalComp = miniMessage.deserialize(message);
                 }
+                
+                boolean isLegacy = false;
+                if (player.hasMetadata("protocol_version") && player.getMetadata("protocol_version").get(0).asInt() <= 47) {
+                    isLegacy = true;
+                }
+                if (isLegacy) {
+                    String legacyStr = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.builder().character('§').build().serialize(finalComp);
+                    if (legacyStr.length() > 32) legacyStr = legacyStr.substring(0, 32);
+                    finalComp = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.builder().character('§').build().deserialize(legacyStr);
+                }
+                
                 setScore(finalComp, score, i);
             }
         }

@@ -6,7 +6,7 @@
 
   <groupId>org.bcnlab</groupId>
   <artifactId>BeaconLabsLobby</artifactId>
-  <version>1.6.0</version>
+  <version>1.6.2</version>
   <packaging>jar</packaging>
 
   <name>BeaconLabsLobby</name>
@@ -95,7 +95,7 @@
           <dependency>
             <groupId>com.viaversion</groupId>
             <artifactId>viaversion-api</artifactId>
-            <version>5.10.0</version>
+            <version>5.11.0</version>
             <scope>provided</scope>
         </dependency>
 </dependencies>

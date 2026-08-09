@@ -1,4 +1,5 @@
 package org.bcnlab.beaconlabslobby.managers;
+import org.bcnlab.beaconlabslobby.utils.SoundUtil;
 
 import de.oliver.fancynpcs.api.FancyNpcsPlugin;
 import de.oliver.fancynpcs.api.Npc;
@@ -72,7 +73,7 @@ public class NPCManager implements Listener {
         Player player = event.getPlayer();
         String npcName = npc.getData().getName();
 
-        player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_TRADE, 1.0f, 1.0f);
+        SoundUtil.playSound(player, org.bukkit.Sound.ENTITY_VILLAGER_TRADE, 1.0f, 1.0f);
         npc.lookAt(player, player.getLocation());
 
         if (npcConfig.contains("npcs." + npcName)) {

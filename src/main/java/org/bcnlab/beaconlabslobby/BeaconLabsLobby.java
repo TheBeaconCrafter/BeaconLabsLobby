@@ -39,7 +39,7 @@ import java.util.List;
 public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageListener {
 
     private String pluginPrefix;
-    private String pluginVersion = "1.6.0";
+    private String pluginVersion = "1.6.2";
     private String noPermsMessage = "&cYou do not have permission to use this command.";
     private BuildManager buildManager;
     private ItemManager itemManager;
@@ -126,9 +126,14 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
     public String getPrefix(Player player) {
         boolean useLegacy = false;
         try {
-            if (getServer().getPluginManager().isPluginEnabled("ViaVersion")) {
+            if (player.hasMetadata("protocol_version")) {
+                int protocol = player.getMetadata("protocol_version").get(0).asInt();
+                if (protocol <= 47) { // 1.8.x is protocol <= 47
+                    useLegacy = true;
+                }
+            } else if (getServer().getPluginManager().isPluginEnabled("ViaVersion")) {
                 int protocol = com.viaversion.viaversion.api.Via.getAPI().getPlayerVersion(player.getUniqueId());
-                if (protocol < 735) { // 1.16 is 735
+                if (protocol <= 47) {
                     useLegacy = true;
                 }
             }

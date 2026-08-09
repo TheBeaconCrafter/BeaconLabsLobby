@@ -1,4 +1,5 @@
 package org.bcnlab.beaconlabslobby.listeners;
+import org.bcnlab.beaconlabslobby.utils.SoundUtil;
 
 import org.bcnlab.beaconlabslobby.BeaconLabsLobby;
 import org.bcnlab.beaconlabslobby.utils.ScoreboardUtil;
@@ -46,8 +47,8 @@ public class PlayerJoinListener implements Listener {
         scoreboardUtil.setPlayerScoreboard();
 
         // Sound Design
-        player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
-        player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_CHIME, 1.0f, 1.5f);
+        SoundUtil.playSound(player, org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+        SoundUtil.playSound(player, org.bukkit.Sound.BLOCK_NOTE_BLOCK_CHIME, 1.0f, 1.5f);
 
         if(plugin.getHealOnJoin()) {
             player.setHealth(20.0);
@@ -84,7 +85,7 @@ public class PlayerJoinListener implements Listener {
             Player player = event.getPlayer();
             
             // Sound Design for interacting
-            player.playSound(player.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 1.0f, 1.2f);
+            SoundUtil.playSound(player, org.bukkit.Sound.UI_BUTTON_CLICK, 1.0f, 1.2f);
             
             switch (actionId) {
                 case "selector":
