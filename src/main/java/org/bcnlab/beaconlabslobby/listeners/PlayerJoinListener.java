@@ -41,10 +41,14 @@ public class PlayerJoinListener implements Listener {
         // Give configurable items on join via ItemManager
         plugin.getItemManager().giveJoinItems(player);
 
-        //Scoreboard
-        ScoreboardUtil scoreboardUtil = new ScoreboardUtil(player, plugin);
-        scoreboardUtil.updateScoreboard();
-        scoreboardUtil.setPlayerScoreboard();
+        //Scoreboard - Delay by 10 ticks (500ms) to allow ViaVersion plugin messages and LuckPerms API to fully load the user
+        org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline()) {
+                ScoreboardUtil scoreboardUtil = new ScoreboardUtil(player, plugin);
+                scoreboardUtil.updateScoreboard();
+                scoreboardUtil.setPlayerScoreboard();
+            }
+        }, 10L);
 
         // Sound Design
         SoundUtil.playSound(player, org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);

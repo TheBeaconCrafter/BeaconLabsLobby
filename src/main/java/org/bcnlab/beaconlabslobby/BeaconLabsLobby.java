@@ -39,6 +39,7 @@ import java.util.List;
 public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageListener {
 
     private String pluginPrefix;
+    private String legacyPrefix;
     private String pluginVersion = "1.6.2";
     private String noPermsMessage = "&cYou do not have permission to use this command.";
     private BuildManager buildManager;
@@ -140,9 +141,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         } catch (Exception ignored) {}
         
         if (useLegacy) {
-            return net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(
-                miniMessage.deserialize(pluginPrefix)
-            );
+            return legacyPrefix.replace("&", "§");
         }
         return pluginPrefix;
     }
@@ -285,6 +284,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
         FileConfiguration config = getConfig();
 
         pluginPrefix = config.getString("plugin-prefix", "<gradient:gold:yellow>BeaconLabs</gradient> <dark_gray>»</dark_gray> ");
+        legacyPrefix = config.getString("legacy-prefix", "&6BeaconLabs &8» &7");
 
         healOnJoin = config.getBoolean("heal-on-join", true);
         returnToSpawn = config.getBoolean("return-spawn-heightlimit", true);

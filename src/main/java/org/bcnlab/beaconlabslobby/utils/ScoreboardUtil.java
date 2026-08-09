@@ -35,13 +35,23 @@ public class ScoreboardUtil {
 
         loadConfig();
 
-        String rawHeader = plugin.getConfig().getString("Scoreboard.display.header", "<red><bold>Lobby</bold></red>");
-        Component header = miniMessage.deserialize(rawHeader);
-        
         boolean isLegacy = false;
         if (player.hasMetadata("protocol_version") && player.getMetadata("protocol_version").get(0).asInt() <= 47) {
             isLegacy = true;
+        } else if (org.bukkit.Bukkit.getPluginManager().isPluginEnabled("ViaVersion")) {
+            try {
+                if (com.viaversion.viaversion.api.Via.getAPI().getPlayerVersion(player.getUniqueId()) <= 47) {
+                    isLegacy = true;
+                }
+            } catch (Exception ignored) {}
         }
+
+        String rawHeader = plugin.getConfig().getString("Scoreboard.display.header", "<red><bold>Lobby</bold></red>");
+        if (isLegacy) {
+            rawHeader = rawHeader.replaceAll("<gradient:([^:>]+).*?>", "<$1>").replace("</gradient>", "");
+        }
+        Component header = miniMessage.deserialize(rawHeader);
+        
         if (isLegacy) {
             String legacyStr = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.builder().character('§').build().serialize(header);
             if (legacyStr.length() > 32) legacyStr = legacyStr.substring(0, 32);
@@ -117,6 +127,21 @@ public class ScoreboardUtil {
                 message = message.replace("{player}", player.getName());
                 message = message.replace("{rank}", "<rank>");
                 
+                boolean isLegacyMsg = false;
+                if (player.hasMetadata("protocol_version") && player.getMetadata("protocol_version").get(0).asInt() <= 47) {
+                    isLegacyMsg = true;
+                } else if (org.bukkit.Bukkit.getPluginManager().isPluginEnabled("ViaVersion")) {
+                    try {
+                        if (com.viaversion.viaversion.api.Via.getAPI().getPlayerVersion(player.getUniqueId()) <= 47) {
+                            isLegacyMsg = true;
+                        }
+                    } catch (Exception ignored) {}
+                }
+                
+                if (isLegacyMsg) {
+                    message = message.replaceAll("<gradient:([^:>]+).*?>", "<$1>").replace("</gradient>", "");
+                }
+                
                 net.kyori.adventure.text.Component rankComp = net.kyori.adventure.text.Component.empty();
                 
                 // Fetch from LuckPerms if possible
@@ -181,7 +206,41 @@ public class ScoreboardUtil {
             team = scoreboard.registerNewTeam("line_" + uniqueIndex);
             team.addEntry(entry);
         }
-        team.prefix(text);
+        
+        boolean isLegacy = false;
+        if (player.hasMetadata("protocol_version") && player.getMetadata("protocol_version").get(0).asInt() <= 47) {
+            isLegacy = true;
+        } else if (Bukkit.getPluginManager().isPluginEnabled("ViaVersion")) {
+            try {
+                if (com.viaversion.viaversion.api.Via.getAPI().getPlayerVersion(player.getUniqueId()) <= 47) {
+                    isLegacy = true;
+                }
+            } catch (Exception ignored) {}
+        }
+        
+        if (isLegacy) {
+            String legacyStr = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.builder().character('§').build().serialize(text);
+            if (legacyStr.length() <= 16) {
+                team.setPrefix(legacyStr);
+                team.setSuffix("");
+            } else {
+                String prefix = legacyStr.substring(0, 16);
+                String suffix = legacyStr.substring(16);
+                if (prefix.endsWith("§")) {
+                    prefix = prefix.substring(0, 15);
+                    suffix = "§" + suffix;
+                }
+                if (suffix.length() > 16) suffix = suffix.substring(0, 16);
+                String lastColors = org.bukkit.ChatColor.getLastColors(prefix);
+                suffix = lastColors + suffix;
+                if (suffix.length() > 16) suffix = suffix.substring(0, 16);
+                
+                team.setPrefix(prefix);
+                team.setSuffix(suffix);
+            }
+        } else {
+            team.prefix(text);
+        }
         objective.getScore(entry).setScore(score);
         scores.put(entry, score);
     }
