@@ -40,7 +40,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
 
     private String pluginPrefix;
     private String legacyPrefix;
-    private String pluginVersion = "1.6.2";
+    private String pluginVersion = "1.6.3";
     private String noPermsMessage = "&cYou do not have permission to use this command.";
     private BuildManager buildManager;
     private ItemManager itemManager;
