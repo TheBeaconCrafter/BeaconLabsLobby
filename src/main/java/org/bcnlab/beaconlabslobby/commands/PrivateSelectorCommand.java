@@ -120,6 +120,22 @@ public class PrivateSelectorCommand implements CommandExecutor, Listener {
                             processedLine = processedLine.replace("%online%", "<gray>Loading...</gray>");
                         }
                         
+                        if (processedLine.contains("%on_players%")) {
+                            hasOnlinePlaceholder = true;
+                            if (!serversToQuery.contains(serverName)) {
+                                serversToQuery.add(serverName);
+                            }
+                            processedLine = processedLine.replace("%on_players%", "<gray>...</gray>");
+                        }
+                        
+                        if (processedLine.contains("%max_players%")) {
+                            hasOnlinePlaceholder = true;
+                            if (!serversToQuery.contains(serverName)) {
+                                serversToQuery.add(serverName);
+                            }
+                            processedLine = processedLine.replace("%max_players%", "<gray>...</gray>");
+                        }
+                        
                         java.util.regex.Matcher m1 = java.util.regex.Pattern.compile("%on_players_([^%]+)%").matcher(processedLine);
                         while (m1.find()) {
                             hasOnlinePlaceholder = true;
