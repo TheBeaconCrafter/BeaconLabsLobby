@@ -95,6 +95,10 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
 
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
         getServer().getMessenger().registerIncomingPluginChannel(this, "BungeeCord", this);
+        
+        // BeaconLabs server info
+        getServer().getMessenger().registerOutgoingPluginChannel(this, "beaconlabs:server_info");
+        getServer().getMessenger().registerIncomingPluginChannel(this, "beaconlabs:server_info", this);
 
         // Register events
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
@@ -547,33 +551,51 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
 
     @Override
     public void onPluginMessageReceived(String channel, Player player, byte[] bytes) {
-        if (!channel.equalsIgnoreCase("BungeeCord")) return;
-        try {
-            java.io.DataInputStream in = new java.io.DataInputStream(new java.io.ByteArrayInputStream(bytes));
-            String subchannel = in.readUTF();
-            if (subchannel.equals("ServerIP")) {
-                String server = in.readUTF();
-                String ip = in.readUTF();
-                int port = in.readUnsignedShort();
-                // Try to connect to the server's IP/port using a short socket timeout
-                Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-                    boolean isOnline = false;
-                    try (java.net.Socket socket = new java.net.Socket()) {
-                        socket.connect(new java.net.InetSocketAddress(ip, port), 400);
-                        isOnline = socket.isConnected();
-                    } catch (Exception ignored) {}
-                    final boolean status = isOnline;
-                    Bukkit.getScheduler().runTask(this, () -> {
-                        if (status) {
-                            org.bcnlab.beaconlabslobby.commands.SelectorCommand.handleOnlineResponse(server);
-                        } else {
-                            org.bcnlab.beaconlabslobby.commands.SelectorCommand.handleOfflineResponse(server);
-                        }
+        if (channel.equalsIgnoreCase("BungeeCord")) {
+            try {
+                java.io.DataInputStream in = new java.io.DataInputStream(new java.io.ByteArrayInputStream(bytes));
+                String subchannel = in.readUTF();
+                if (subchannel.equals("ServerIP")) {
+                    String server = in.readUTF();
+                    String ip = in.readUTF();
+                    int port = in.readUnsignedShort();
+                    // Try to connect to the server's IP/port using a short socket timeout
+                    Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+                        boolean isOnline = false;
+                        try (java.net.Socket socket = new java.net.Socket()) {
+                            socket.connect(new java.net.InetSocketAddress(ip, port), 400);
+                            isOnline = socket.isConnected();
+                        } catch (Exception ignored) {}
+                        final boolean status = isOnline;
+                        Bukkit.getScheduler().runTask(this, () -> {
+                            if (status) {
+                                org.bcnlab.beaconlabslobby.commands.SelectorCommand.handleOnlineResponse(server);
+                            } else {
+                                org.bcnlab.beaconlabslobby.commands.SelectorCommand.handleOfflineResponse(server);
+                            }
+                        });
                     });
-                });
+                }
+            } catch (Exception ex) {
+                getLogger().warning("Failed to parse BungeeCord plugin message: " + ex.getMessage());
             }
-        } catch (Exception ex) {
-            getLogger().warning("Failed to parse BungeeCord plugin message: " + ex.getMessage());
+        } else if (channel.equalsIgnoreCase("beaconlabs:server_info")) {
+            try {
+                java.io.DataInputStream in = new java.io.DataInputStream(new java.io.ByteArrayInputStream(bytes));
+                String subchannel = in.readUTF();
+                if (subchannel.equals("Response")) {
+                    String server = in.readUTF();
+                    boolean online = in.readBoolean();
+                    int onlineCount = in.readInt();
+                    int maxCount = in.readInt();
+                    
+                    Bukkit.getScheduler().runTask(this, () -> {
+                        org.bcnlab.beaconlabslobby.commands.SelectorCommand.handleServerInfoResponse(server, online, onlineCount, maxCount);
+                    });
+                }
+            } catch (Exception ex) {
+                getLogger().warning("Failed to parse beaconlabs:server_info message: " + ex.getMessage());
+            }
         }
     }
 }

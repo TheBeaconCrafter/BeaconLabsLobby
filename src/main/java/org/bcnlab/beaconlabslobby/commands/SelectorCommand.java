@@ -35,6 +35,20 @@ public class SelectorCommand implements CommandExecutor, Listener {
     private static final Map<String, List<PendingOnlineRequest>> pendingOnlineRequests = new HashMap<>();
     private static final long ONLINE_REQUEST_TIMEOUT = 2500; // ms
 
+    // Cache responses so an item depending on multiple servers can render them all simultaneously
+    private static final Map<String, ServerInfoCache> serverInfoCache = new HashMap<>();
+
+    private static class ServerInfoCache {
+        public final boolean online;
+        public final int onlineCount;
+        public final int maxCount;
+        public ServerInfoCache(boolean online, int onlineCount, int maxCount) {
+            this.online = online;
+            this.onlineCount = onlineCount;
+            this.maxCount = maxCount;
+        }
+    }
+
     // Data structure to hold info needed to update the GUI
     private static class PendingOnlineRequest {
         public final int slot;
@@ -42,74 +56,101 @@ public class SelectorCommand implements CommandExecutor, Listener {
         public final List<String> lore;
         public final String name;
         public final Material type;
+        public final String mainServer; // the original server name for %online%
         public final long timestamp;
-        public PendingOnlineRequest(int slot, Inventory inventory, List<String> lore, String name, Material type) {
+        public PendingOnlineRequest(int slot, Inventory inventory, List<String> lore, String name, Material type, String mainServer) {
             this.slot = slot;
             this.inventory = inventory;
             this.lore = lore;
             this.name = name;
             this.type = type;
+            this.mainServer = mainServer;
             this.timestamp = System.currentTimeMillis();
         }
     }
 
     // Called from loadServerItems
-    public static void addPendingOnlineRequest(String serverName, int slot, Inventory inventory, Player player, BeaconLabsLobby plugin, List<String> lore, String name, Material type) {
+    public static void addPendingOnlineRequest(String serverName, int slot, Inventory inventory, Player player, BeaconLabsLobby plugin, List<String> lore, String name, Material type, String mainServer) {
         // Store the info for later update (support multiple requests per server)
         pendingOnlineRequests.computeIfAbsent(serverName, k -> new ArrayList<>())
-            .add(new PendingOnlineRequest(slot, inventory, lore, name, type));
-        // Send BungeeCord ServerIP request
+            .add(new PendingOnlineRequest(slot, inventory, lore, name, type, mainServer));
+        // Send Custom server_info request
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
-        out.writeUTF("ServerIP");
+        out.writeUTF("Request");
         out.writeUTF(serverName);
-        player.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
+        player.sendPluginMessage(plugin, "beaconlabs:server_info", out.toByteArray());
         // Schedule timeout for offline fallback
         Bukkit.getScheduler().runTaskLater(plugin, () -> handleOnlineTimeout(serverName), ONLINE_REQUEST_TIMEOUT / 50); // convert ms to ticks
     }
 
-    // Called from BeaconLabsLobby.onPluginMessageReceived
+    // Legacy handleOnlineResponse (keep if anything still uses it)
     public static void handleOnlineResponse(String serverName) {
-        List<PendingOnlineRequest> reqs = pendingOnlineRequests.remove(serverName);
-        if (reqs != null) {
-            for (PendingOnlineRequest req : reqs) {
-                updateItemLoreStatic(req.inventory, req.slot, req.lore, "<green>Online</green>");
-            }
-        }
+        handleServerInfoResponse(serverName, true, 0, 0);
     }
 
-    // Called from BeaconLabsLobby.onPluginMessageReceived for offline servers
+    // Legacy handleOfflineResponse
     public static void handleOfflineResponse(String serverName) {
+        handleServerInfoResponse(serverName, false, 0, 0);
+    }
+    
+    // New handler for server info
+    public static void handleServerInfoResponse(String serverName, boolean isOnline, int onlineCount, int maxCount) {
+        serverInfoCache.put(serverName, new ServerInfoCache(isOnline, onlineCount, maxCount));
+        
         List<PendingOnlineRequest> reqs = pendingOnlineRequests.remove(serverName);
         if (reqs != null) {
             for (PendingOnlineRequest req : reqs) {
-                updateItemLoreStatic(req.inventory, req.slot, req.lore, "<red>Offline</red>");
+                updateItemLoreStatic(req.inventory, req.slot, req.lore, req.mainServer);
             }
         }
     }
 
     // Called on timeout if no response
     private static void handleOnlineTimeout(String serverName) {
-        List<PendingOnlineRequest> reqs = pendingOnlineRequests.remove(serverName);
-        if (reqs != null) {
-            for (PendingOnlineRequest req : reqs) {
-                updateItemLoreStatic(req.inventory, req.slot, req.lore, "<red>Offline</red>");
-            }
-        }
+        handleServerInfoResponse(serverName, false, 0, 0);
     }
 
     // Static helper to update lore from outside inner class
-    private static void updateItemLoreStatic(Inventory inventory, int slot, List<String> lore, String onlineStatus) {
+    private static void updateItemLoreStatic(Inventory inventory, int slot, List<String> lore, String mainServer) {
         ItemStack item = inventory.getItem(slot);
         if (item == null) return;
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return;
         List<net.kyori.adventure.text.Component> updatedLore = new ArrayList<>();
         for (String line : lore) {
-            if (line.contains("%online%")) {
-                updatedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line.replace("%online%", onlineStatus)).decoration(TextDecoration.ITALIC, false));
-            } else {
-                updatedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line).decoration(TextDecoration.ITALIC, false));
+            String processedLine = line;
+            
+            if (processedLine.contains("%online%")) {
+                ServerInfoCache mainInfo = serverInfoCache.get(mainServer);
+                if (mainInfo != null) {
+                    processedLine = processedLine.replace("%online%", mainInfo.online ? "<green>Online</green>" : "<red>Offline</red>");
+                } else {
+                    processedLine = processedLine.replace("%online%", "<gray>Loading...</gray>");
+                }
             }
+            
+            java.util.regex.Matcher m1 = java.util.regex.Pattern.compile("%on_players_([^%]+)%").matcher(processedLine);
+            while (m1.find()) {
+                String srv = m1.group(1);
+                ServerInfoCache info = serverInfoCache.get(srv);
+                if (info != null) {
+                    processedLine = processedLine.replace(m1.group(0), String.valueOf(info.online ? info.onlineCount : 0));
+                } else {
+                    processedLine = processedLine.replace(m1.group(0), "<gray>...</gray>");
+                }
+            }
+            
+            java.util.regex.Matcher m2 = java.util.regex.Pattern.compile("%max_players_([^%]+)%").matcher(processedLine);
+            while (m2.find()) {
+                String srv = m2.group(1);
+                ServerInfoCache info = serverInfoCache.get(srv);
+                if (info != null) {
+                    processedLine = processedLine.replace(m2.group(0), String.valueOf(info.online ? info.maxCount : 0));
+                } else {
+                    processedLine = processedLine.replace(m2.group(0), "<gray>...</gray>");
+                }
+            }
+            updatedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(processedLine).decoration(TextDecoration.ITALIC, false));
         }
         meta.lore(updatedLore);
         item.setItemMeta(meta);
@@ -197,25 +238,49 @@ public class SelectorCommand implements CommandExecutor, Listener {
                     // Apply color codes and formatting to lore
                     List<net.kyori.adventure.text.Component> formattedLore = new ArrayList<>();
                     boolean hasOnlinePlaceholder = false;
+                    List<String> serversToQuery = new ArrayList<>();
+                    
                     for (String line : lore) {
-                        if (line.contains("%online%")) {
+                        String processedLine = line;
+                        if (processedLine.contains("%online%")) {
                             hasOnlinePlaceholder = true;
-                            // Temporary placeholder (gray)
-                            formattedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line.replace("%online%", "<gray>Loading...</gray>")).decoration(TextDecoration.ITALIC, false));
-                        } else {
-                            formattedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line).decoration(TextDecoration.ITALIC, false));
+                            if (!serversToQuery.contains(serverName)) {
+                                serversToQuery.add(serverName);
+                            }
+                            processedLine = processedLine.replace("%online%", "<gray>Loading...</gray>");
                         }
+                        
+                        // Check for %on_players_SERVER% and %max_players_SERVER%
+                        java.util.regex.Matcher m1 = java.util.regex.Pattern.compile("%on_players_([^%]+)%").matcher(processedLine);
+                        while (m1.find()) {
+                            hasOnlinePlaceholder = true;
+                            String srv = m1.group(1);
+                            if (!serversToQuery.contains(srv)) serversToQuery.add(srv);
+                            processedLine = processedLine.replace(m1.group(0), "<gray>...</gray>");
+                        }
+                        
+                        java.util.regex.Matcher m2 = java.util.regex.Pattern.compile("%max_players_([^%]+)%").matcher(processedLine);
+                        while (m2.find()) {
+                            hasOnlinePlaceholder = true;
+                            String srv = m2.group(1);
+                            if (!serversToQuery.contains(srv)) serversToQuery.add(srv);
+                            processedLine = processedLine.replace(m2.group(0), "<gray>...</gray>");
+                        }
+                        
+                        formattedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(processedLine).decoration(TextDecoration.ITALIC, false));
                     }
                     meta.lore(formattedLore);
                     item.setItemMeta(meta);
 
                     inventory.setItem(slot, item);
 
-                    // If %online% is present, send PlayerCount request
+                    // If online placeholders are present, send requests
                     if (hasOnlinePlaceholder) {
                         Player anyPlayer = Bukkit.getOnlinePlayers().stream().findFirst().orElse(null);
                         if (anyPlayer != null) {
-                            addPendingOnlineRequest(serverName, slot, inventory, anyPlayer, plugin, lore, name, type);
+                            for (String srv : serversToQuery) {
+                                addPendingOnlineRequest(srv, slot, inventory, anyPlayer, plugin, lore, name, type, serverName);
+                            }
                         }
                     }
                 }

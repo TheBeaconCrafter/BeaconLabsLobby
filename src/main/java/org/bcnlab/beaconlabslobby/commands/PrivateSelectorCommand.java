@@ -108,13 +108,35 @@ public class PrivateSelectorCommand implements CommandExecutor, Listener {
 
                     List<net.kyori.adventure.text.Component> formattedLore = new ArrayList<>();
                     boolean hasOnlinePlaceholder = false;
+                    List<String> serversToQuery = new ArrayList<>();
+                    
                     for (String line : lore) {
-                        if (line.contains("%online%")) {
+                        String processedLine = line;
+                        if (processedLine.contains("%online%")) {
                             hasOnlinePlaceholder = true;
-                            formattedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line.replace("%online%", "<gray>Loading...</gray>")).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
-                        } else {
-                            formattedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
+                            if (!serversToQuery.contains(serverName)) {
+                                serversToQuery.add(serverName);
+                            }
+                            processedLine = processedLine.replace("%online%", "<gray>Loading...</gray>");
                         }
+                        
+                        java.util.regex.Matcher m1 = java.util.regex.Pattern.compile("%on_players_([^%]+)%").matcher(processedLine);
+                        while (m1.find()) {
+                            hasOnlinePlaceholder = true;
+                            String srv = m1.group(1);
+                            if (!serversToQuery.contains(srv)) serversToQuery.add(srv);
+                            processedLine = processedLine.replace(m1.group(0), "<gray>...</gray>");
+                        }
+                        
+                        java.util.regex.Matcher m2 = java.util.regex.Pattern.compile("%max_players_([^%]+)%").matcher(processedLine);
+                        while (m2.find()) {
+                            hasOnlinePlaceholder = true;
+                            String srv = m2.group(1);
+                            if (!serversToQuery.contains(srv)) serversToQuery.add(srv);
+                            processedLine = processedLine.replace(m2.group(0), "<gray>...</gray>");
+                        }
+                        
+                        formattedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(processedLine).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
                     }
                     meta.lore(formattedLore);
                     item.setItemMeta(meta);
@@ -124,7 +146,9 @@ public class PrivateSelectorCommand implements CommandExecutor, Listener {
                     if (hasOnlinePlaceholder) {
                         Player firstOnline = Bukkit.getOnlinePlayers().stream().findFirst().orElse(null);
                         if (firstOnline != null) {
-                            SelectorCommand.addPendingOnlineRequest(serverName, slot, inventory, firstOnline, plugin, lore, name, type);
+                            for (String srv : serversToQuery) {
+                                SelectorCommand.addPendingOnlineRequest(srv, slot, inventory, firstOnline, plugin, lore, name, type, serverName);
+                            }
                         }
                     }
                 }
