@@ -40,7 +40,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
 
     private String pluginPrefix;
     private String legacyPrefix;
-    private String pluginVersion = "1.6.3";
+    private String pluginVersion = "1.6.4";
     private String noPermsMessage = "&cYou do not have permission to use this command.";
     private BuildManager buildManager;
     private ItemManager itemManager;
@@ -85,8 +85,10 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
 
         if (getConfig().getBoolean("disable-mob-spawning", true)) {
             for (World world : Bukkit.getWorlds()) {
+                world.setDifficulty(org.bukkit.Difficulty.PEACEFUL);
+                world.setGameRule(org.bukkit.GameRule.DO_MOB_SPAWNING, false);
                 for (Entity entity : world.getEntities()) {
-                    if (entity instanceof Monster || entity instanceof Animals || entity instanceof Ambient || entity instanceof WaterMob) {
+                    if (entity instanceof Monster || entity instanceof Animals || entity instanceof Ambient || entity instanceof WaterMob || entity instanceof org.bukkit.entity.Slime || entity instanceof org.bukkit.entity.Ghast) {
                         entity.remove();
                     }
                 }
@@ -151,7 +153,6 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
     }
 
     public void sendMessage(CommandSender sender, String messageString) {
-        net.kyori.adventure.text.minimessage.MiniMessage miniMessage = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage();
         String prefixStr = getPrefix(sender);
         net.kyori.adventure.text.Component prefixComp;
         if (prefixStr.contains("§")) {

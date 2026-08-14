@@ -15,13 +15,16 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ItemManager {
 
     private final BeaconLabsLobby plugin;
     private final NamespacedKey itemKey;
     private final MiniMessage miniMessage;
+    private final Map<String, ItemStack> itemTemplates = new HashMap<>();
 
     public ItemManager(BeaconLabsLobby plugin) {
         this.plugin = plugin;
@@ -31,15 +34,19 @@ public class ItemManager {
 
     public void giveJoinItems(Player player) {
         player.getInventory().clear();
-        giveItem(player, "server-selector", "selector");
-        giveItem(player, "private-server-selector", "privateselector");
-        giveItem(player, "player-hider", "hider");
-        giveItem(player, "settings", "settings");
-        giveItem(player, "friends", "friends");
+        FileConfiguration config = plugin.getConfig();
+        giveItem(player, config, "server-selector", "selector");
+        giveItem(player, config, "private-server-selector", "privateselector");
+        giveItem(player, config, "player-hider", "hider");
+        giveItem(player, config, "settings", "settings");
+        giveItem(player, config, "friends", "friends");
     }
 
-    private void giveItem(Player player, String configPath, String actionId) {
-        FileConfiguration config = plugin.getConfig();
+    public void reload() {
+        itemTemplates.clear();
+    }
+
+    private void giveItem(Player player, FileConfiguration config, String configPath, String actionId) {
         if (configPath.equals("private-server-selector")) {
             if (!config.getBoolean("private-server-selector.enabled", false)) return;
             String permission = config.getString("private-server-selector.permission", "beaconlabslobby.privateselector");
@@ -56,27 +63,30 @@ public class ItemManager {
         List<String> lore = section.getStringList("lore");
         int slot = section.getInt("slot", 0);
 
-        ItemStack item = new ItemStack(type);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.displayName(parseText(name).decoration(TextDecoration.ITALIC, false));
-            
-            List<Component> componentLore = new ArrayList<>();
-            for (String line : lore) {
-                componentLore.add(parseText(line).decoration(TextDecoration.ITALIC, false));
-            }
-            meta.lore(componentLore);
-            
-            // Handle Player Head
-            if (type == Material.PLAYER_HEAD && meta instanceof org.bukkit.inventory.meta.SkullMeta skullMeta) {
-                skullMeta.setOwningPlayer(player);
-            }
+        ItemStack item = itemTemplates.get(configPath);
+        if (item == null) {
+            item = new ItemStack(type);
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null) {
+                meta.displayName(parseText(name).decoration(TextDecoration.ITALIC, false));
 
-            // Mark item with PDC
-            meta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, actionId);
-            item.setItemMeta(meta);
+                List<Component> componentLore = new ArrayList<>(lore.size());
+                for (String line : lore) {
+                    componentLore.add(parseText(line).decoration(TextDecoration.ITALIC, false));
+                }
+                meta.lore(componentLore);
+                meta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, actionId);
+                item.setItemMeta(meta);
+            }
+            itemTemplates.put(configPath, item);
         }
 
+        // Each player needs their own head owner, so clone the cached template before giving it.
+        item = item.clone();
+        if (type == Material.PLAYER_HEAD && item.getItemMeta() instanceof org.bukkit.inventory.meta.SkullMeta skullMeta) {
+            skullMeta.setOwningPlayer(player);
+            item.setItemMeta(skullMeta);
+        }
         player.getInventory().setItem(slot, item);
     }
 

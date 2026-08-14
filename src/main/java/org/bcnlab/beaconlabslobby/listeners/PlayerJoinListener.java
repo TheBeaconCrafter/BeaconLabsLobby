@@ -36,9 +36,7 @@ public class PlayerJoinListener implements Listener {
         teleportPlayerToSpawn(player);
         player.setGameMode(GameMode.ADVENTURE);
 
-        clearInventory(player);
-
-        // Give configurable items on join via ItemManager
+        // Give configurable items on join via ItemManager (it clears the inventory once).
         plugin.getItemManager().giveJoinItems(player);
 
         //Scoreboard - Delay by 10 ticks (500ms) to allow ViaVersion plugin messages and LuckPerms API to fully load the user
@@ -73,10 +71,6 @@ public class PlayerJoinListener implements Listener {
             plugin.getLogger().severe("Failed to teleport player " + player.getName() + " to spawn:");
             e.printStackTrace();
         }
-    }
-
-    private void clearInventory(Player player) {
-        player.getInventory().clear(); // Clear the player's entire inventory
     }
 
     @EventHandler

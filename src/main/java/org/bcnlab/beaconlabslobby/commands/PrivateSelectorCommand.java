@@ -22,10 +22,17 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 public class PrivateSelectorCommand implements CommandExecutor, Listener {
 
+    private static final Pattern ONLINE_PLAYERS_PATTERN = Pattern.compile("%on_players_([^%]+)%");
+    private static final Pattern MAX_PLAYERS_PATTERN = Pattern.compile("%max_players_([^%]+)%");
     private final BeaconLabsLobby plugin;
 
     public PrivateSelectorCommand(BeaconLabsLobby plugin) {
@@ -76,7 +83,9 @@ public class PrivateSelectorCommand implements CommandExecutor, Listener {
             loadServerItems(player);
         }
 
-        private void loadServerItems(Player anyPlayer) {
+        private final Map<Integer, String> serverNamesBySlot = new HashMap<>();
+
+        private void loadServerItems(Player queryPlayer) {
             FileConfiguration config = plugin.getConfig();
             ConfigurationSection itemsSection = config.getConfigurationSection("private-server-selector.items");
 
@@ -104,71 +113,67 @@ public class PrivateSelectorCommand implements CommandExecutor, Listener {
                 ItemStack item = new ItemStack(type);
                 ItemMeta meta = item.getItemMeta();
                 if (meta != null) {
-                    meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(name).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
+                    meta.displayName(plugin.getMiniMessage().deserialize(name).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
 
-                    List<net.kyori.adventure.text.Component> formattedLore = new ArrayList<>();
+                    List<net.kyori.adventure.text.Component> formattedLore = new ArrayList<>(lore.size());
                     boolean hasOnlinePlaceholder = false;
-                    List<String> serversToQuery = new ArrayList<>();
+                    Set<String> serversToQuery = new HashSet<>();
                     
                     for (String line : lore) {
                         String processedLine = line;
                         if (processedLine.contains("%online%")) {
                             hasOnlinePlaceholder = true;
-                            if (!serversToQuery.contains(serverName)) {
-                                serversToQuery.add(serverName);
-                            }
+                            serversToQuery.add(serverName);
                             processedLine = processedLine.replace("%online%", "<gray>Loading...</gray>");
                         }
                         
                         if (processedLine.contains("%on_players%")) {
                             hasOnlinePlaceholder = true;
-                            if (!serversToQuery.contains(serverName)) {
-                                serversToQuery.add(serverName);
-                            }
+                            serversToQuery.add(serverName);
                             processedLine = processedLine.replace("%on_players%", "<gray>...</gray>");
                         }
                         
                         if (processedLine.contains("%max_players%")) {
                             hasOnlinePlaceholder = true;
-                            if (!serversToQuery.contains(serverName)) {
-                                serversToQuery.add(serverName);
-                            }
+                            serversToQuery.add(serverName);
                             processedLine = processedLine.replace("%max_players%", "<gray>...</gray>");
                         }
                         
-                        java.util.regex.Matcher m1 = java.util.regex.Pattern.compile("%on_players_([^%]+)%").matcher(processedLine);
+                        java.util.regex.Matcher m1 = ONLINE_PLAYERS_PATTERN.matcher(processedLine);
                         while (m1.find()) {
                             hasOnlinePlaceholder = true;
                             String srv = m1.group(1);
-                            if (!serversToQuery.contains(srv)) serversToQuery.add(srv);
+                            serversToQuery.add(srv);
                             processedLine = processedLine.replace(m1.group(0), "<gray>...</gray>");
                         }
                         
-                        java.util.regex.Matcher m2 = java.util.regex.Pattern.compile("%max_players_([^%]+)%").matcher(processedLine);
+                        java.util.regex.Matcher m2 = MAX_PLAYERS_PATTERN.matcher(processedLine);
                         while (m2.find()) {
                             hasOnlinePlaceholder = true;
                             String srv = m2.group(1);
-                            if (!serversToQuery.contains(srv)) serversToQuery.add(srv);
+                            serversToQuery.add(srv);
                             processedLine = processedLine.replace(m2.group(0), "<gray>...</gray>");
                         }
                         
-                        formattedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(processedLine).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
+                        formattedLore.add(plugin.getMiniMessage().deserialize(processedLine).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
                     }
                     meta.lore(formattedLore);
                     item.setItemMeta(meta);
 
                     inventory.setItem(slot, item);
+                    serverNamesBySlot.put(slot, serverName);
 
                     if (hasOnlinePlaceholder) {
-                        Player firstOnline = Bukkit.getOnlinePlayers().stream().findFirst().orElse(null);
-                        if (firstOnline != null) {
-                            for (String srv : serversToQuery) {
-                                SelectorCommand.addPendingOnlineRequest(srv, slot, inventory, firstOnline, plugin, lore, name, type, serverName);
-                            }
+                        for (String srv : serversToQuery) {
+                            SelectorCommand.addPendingOnlineRequest(srv, slot, inventory, queryPlayer, plugin, lore, name, type, serverName);
                         }
                     }
                 }
             }
+        }
+
+        private String getServerName(int slot) {
+            return serverNamesBySlot.get(slot);
         }
 
         @Override
@@ -189,49 +194,16 @@ public class PrivateSelectorCommand implements CommandExecutor, Listener {
         ItemStack clickedItem = event.getCurrentItem();
         if (clickedItem != null && clickedItem.getType() != Material.AIR) {
             Player player = (Player) event.getWhoClicked();
-            ItemMeta meta = clickedItem.getItemMeta();
-            if (meta == null || !meta.hasDisplayName()) {
-                return;
-            }
-
-            String serverIdentifier = getServerIdentifier(clickedItem);
-            String serverName = plugin.getConfig().getString("private-server-selector.items." + serverIdentifier + ".server");
+            PrivateServerSelectorGUI gui = (PrivateServerSelectorGUI) clickedInventory.getHolder();
+            String serverName = gui.getServerName(event.getSlot());
 
             if (serverName == null) {
-                plugin.getLogger().warning("Server name not found for private selector item: " + serverIdentifier);
                 return;
             }
 
             sendPlayerToServer(player, serverName);
             player.closeInventory();
         }
-    }
-
-    private String getServerIdentifier(ItemStack item) {
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null || !meta.hasDisplayName()) {
-            return null;
-        }
-
-        String displayName = meta.getDisplayName();
-        FileConfiguration config = plugin.getConfig();
-        ConfigurationSection itemsSection = config.getConfigurationSection("private-server-selector.items");
-
-        if (itemsSection == null) {
-            return null;
-        }
-
-        for (String key : itemsSection.getKeys(false)) {
-            ConfigurationSection itemSection = itemsSection.getConfigurationSection(key);
-            if (itemSection == null) continue;
-
-            String name = itemSection.getString("name");
-            if (name != null && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(name)).equals(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(meta.displayName()))) {
-                return key;
-            }
-        }
-
-        return null;
     }
 
     private void sendPlayerToServer(Player player, String serverName) {

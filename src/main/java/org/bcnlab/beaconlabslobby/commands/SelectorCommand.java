@@ -21,19 +21,25 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import org.bukkit.Bukkit;
-import org.bukkit.scheduler.BukkitRunnable;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 public class SelectorCommand implements CommandExecutor, Listener {
     // Track pending requests per server (supporting multiple requests per server)
     private static final Map<String, List<PendingOnlineRequest>> pendingOnlineRequests = new HashMap<>();
+    private static final Set<String> inFlightRequests = new HashSet<>();
     private static final long ONLINE_REQUEST_TIMEOUT = 2500; // ms
+    private static final long SERVER_INFO_CACHE_TTL = 2500; // ms
+    private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
+    private static final Pattern ONLINE_PLAYERS_PATTERN = Pattern.compile("%on_players_([^%]+)%");
+    private static final Pattern MAX_PLAYERS_PATTERN = Pattern.compile("%max_players_([^%]+)%");
 
     // Cache responses so an item depending on multiple servers can render them all simultaneously
     private static final Map<String, ServerInfoCache> serverInfoCache = new HashMap<>();
@@ -42,10 +48,12 @@ public class SelectorCommand implements CommandExecutor, Listener {
         public final boolean online;
         public final int onlineCount;
         public final int maxCount;
+        public final long timestamp;
         public ServerInfoCache(boolean online, int onlineCount, int maxCount) {
             this.online = online;
             this.onlineCount = onlineCount;
             this.maxCount = maxCount;
+            this.timestamp = System.currentTimeMillis();
         }
     }
 
@@ -74,13 +82,24 @@ public class SelectorCommand implements CommandExecutor, Listener {
         // Store the info for later update (support multiple requests per server)
         pendingOnlineRequests.computeIfAbsent(serverName, k -> new ArrayList<>())
             .add(new PendingOnlineRequest(slot, inventory, lore, name, type, mainServer));
-        // Send Custom server_info request
+
+        ServerInfoCache cachedInfo = serverInfoCache.get(serverName);
+        if (cachedInfo != null && System.currentTimeMillis() - cachedInfo.timestamp <= SERVER_INFO_CACHE_TTL) {
+            flushPendingRequests(serverName);
+            return;
+        }
+
+        // Only one request and timeout are needed while a server is being queried, even
+        // when several selector items or players are waiting for the same response.
+        if (!inFlightRequests.add(serverName)) {
+            return;
+        }
+
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
         out.writeUTF("Request");
         out.writeUTF(serverName);
         player.sendPluginMessage(plugin, "beaconlabs:server_info", out.toByteArray());
-        // Schedule timeout for offline fallback
-        Bukkit.getScheduler().runTaskLater(plugin, () -> handleOnlineTimeout(serverName), ONLINE_REQUEST_TIMEOUT / 50); // convert ms to ticks
+        Bukkit.getScheduler().runTaskLater(plugin, () -> handleOnlineTimeout(serverName), ONLINE_REQUEST_TIMEOUT / 50);
     }
 
     // Legacy handleOnlineResponse (keep if anything still uses it)
@@ -96,12 +115,18 @@ public class SelectorCommand implements CommandExecutor, Listener {
     // New handler for server info
     public static void handleServerInfoResponse(String serverName, boolean isOnline, int onlineCount, int maxCount) {
         serverInfoCache.put(serverName, new ServerInfoCache(isOnline, onlineCount, maxCount));
-        
+        inFlightRequests.remove(serverName);
+
+        flushPendingRequests(serverName);
+    }
+
+    private static void flushPendingRequests(String serverName) {
         List<PendingOnlineRequest> reqs = pendingOnlineRequests.remove(serverName);
-        if (reqs != null) {
-            for (PendingOnlineRequest req : reqs) {
-                updateItemLoreStatic(req.inventory, req.slot, req.lore, req.mainServer);
-            }
+        if (reqs == null) {
+            return;
+        }
+        for (PendingOnlineRequest req : reqs) {
+            updateItemLoreStatic(req.inventory, req.slot, req.lore, req.mainServer);
         }
     }
 
@@ -116,12 +141,12 @@ public class SelectorCommand implements CommandExecutor, Listener {
         if (item == null) return;
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return;
-        List<net.kyori.adventure.text.Component> updatedLore = new ArrayList<>();
+        List<net.kyori.adventure.text.Component> updatedLore = new ArrayList<>(lore.size());
+        ServerInfoCache mainInfo = serverInfoCache.get(mainServer);
         for (String line : lore) {
             String processedLine = line;
-            
+
             if (processedLine.contains("%online%")) {
-                ServerInfoCache mainInfo = serverInfoCache.get(mainServer);
                 if (mainInfo != null) {
                     processedLine = processedLine.replace("%online%", mainInfo.online ? "<green>Online</green>" : "<red>Offline</red>");
                 } else {
@@ -130,7 +155,6 @@ public class SelectorCommand implements CommandExecutor, Listener {
             }
             
             if (processedLine.contains("%on_players%")) {
-                ServerInfoCache mainInfo = serverInfoCache.get(mainServer);
                 if (mainInfo != null) {
                     processedLine = processedLine.replace("%on_players%", String.valueOf(mainInfo.online ? mainInfo.onlineCount : 0));
                 } else {
@@ -139,7 +163,6 @@ public class SelectorCommand implements CommandExecutor, Listener {
             }
             
             if (processedLine.contains("%max_players%")) {
-                ServerInfoCache mainInfo = serverInfoCache.get(mainServer);
                 if (mainInfo != null) {
                     processedLine = processedLine.replace("%max_players%", String.valueOf(mainInfo.online ? mainInfo.maxCount : 0));
                 } else {
@@ -147,7 +170,7 @@ public class SelectorCommand implements CommandExecutor, Listener {
                 }
             }
             
-            java.util.regex.Matcher m1 = java.util.regex.Pattern.compile("%on_players_([^%]+)%").matcher(processedLine);
+            java.util.regex.Matcher m1 = ONLINE_PLAYERS_PATTERN.matcher(processedLine);
             while (m1.find()) {
                 String srv = m1.group(1);
                 ServerInfoCache info = serverInfoCache.get(srv);
@@ -158,7 +181,7 @@ public class SelectorCommand implements CommandExecutor, Listener {
                 }
             }
             
-            java.util.regex.Matcher m2 = java.util.regex.Pattern.compile("%max_players_([^%]+)%").matcher(processedLine);
+            java.util.regex.Matcher m2 = MAX_PLAYERS_PATTERN.matcher(processedLine);
             while (m2.find()) {
                 String srv = m2.group(1);
                 ServerInfoCache info = serverInfoCache.get(srv);
@@ -168,7 +191,7 @@ public class SelectorCommand implements CommandExecutor, Listener {
                     processedLine = processedLine.replace(m2.group(0), "<gray>...</gray>");
                 }
             }
-            updatedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(processedLine).decoration(TextDecoration.ITALIC, false));
+            updatedLore.add(MINI_MESSAGE.deserialize(processedLine).decoration(TextDecoration.ITALIC, false));
         }
         meta.lore(updatedLore);
         item.setItemMeta(meta);
@@ -220,10 +243,12 @@ public class SelectorCommand implements CommandExecutor, Listener {
             this.inventory = Bukkit.createInventory(this, rows * 9, title);
 
             // Load server items from config
-            loadServerItems();
+            loadServerItems(player);
         }
 
-        private void loadServerItems() {
+        private final Map<Integer, String> serverNamesBySlot = new HashMap<>();
+
+        private void loadServerItems(Player queryPlayer) {
             FileConfiguration config = plugin.getConfig();
             ConfigurationSection itemsSection = config.getConfigurationSection("server-selector.items");
 
@@ -251,74 +276,70 @@ public class SelectorCommand implements CommandExecutor, Listener {
                 ItemStack item = new ItemStack(type);
                 ItemMeta meta = item.getItemMeta();
                 if (meta != null) {
-                    meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(name).decoration(TextDecoration.ITALIC, false));
+                    meta.displayName(plugin.getMiniMessage().deserialize(name).decoration(TextDecoration.ITALIC, false));
 
                     // Apply color codes and formatting to lore
-                    List<net.kyori.adventure.text.Component> formattedLore = new ArrayList<>();
+                    List<net.kyori.adventure.text.Component> formattedLore = new ArrayList<>(lore.size());
                     boolean hasOnlinePlaceholder = false;
-                    List<String> serversToQuery = new ArrayList<>();
+                    Set<String> serversToQuery = new HashSet<>();
                     
                     for (String line : lore) {
                         String processedLine = line;
                         if (processedLine.contains("%online%")) {
                             hasOnlinePlaceholder = true;
-                            if (!serversToQuery.contains(serverName)) {
-                                serversToQuery.add(serverName);
-                            }
+                            serversToQuery.add(serverName);
                             processedLine = processedLine.replace("%online%", "<gray>Loading...</gray>");
                         }
                         
                         if (processedLine.contains("%on_players%")) {
                             hasOnlinePlaceholder = true;
-                            if (!serversToQuery.contains(serverName)) {
-                                serversToQuery.add(serverName);
-                            }
+                            serversToQuery.add(serverName);
                             processedLine = processedLine.replace("%on_players%", "<gray>...</gray>");
                         }
                         
                         if (processedLine.contains("%max_players%")) {
                             hasOnlinePlaceholder = true;
-                            if (!serversToQuery.contains(serverName)) {
-                                serversToQuery.add(serverName);
-                            }
+                            serversToQuery.add(serverName);
                             processedLine = processedLine.replace("%max_players%", "<gray>...</gray>");
                         }
                         
                         // Check for %on_players_SERVER% and %max_players_SERVER%
-                        java.util.regex.Matcher m1 = java.util.regex.Pattern.compile("%on_players_([^%]+)%").matcher(processedLine);
+                        java.util.regex.Matcher m1 = ONLINE_PLAYERS_PATTERN.matcher(processedLine);
                         while (m1.find()) {
                             hasOnlinePlaceholder = true;
                             String srv = m1.group(1);
-                            if (!serversToQuery.contains(srv)) serversToQuery.add(srv);
+                            serversToQuery.add(srv);
                             processedLine = processedLine.replace(m1.group(0), "<gray>...</gray>");
                         }
                         
-                        java.util.regex.Matcher m2 = java.util.regex.Pattern.compile("%max_players_([^%]+)%").matcher(processedLine);
+                        java.util.regex.Matcher m2 = MAX_PLAYERS_PATTERN.matcher(processedLine);
                         while (m2.find()) {
                             hasOnlinePlaceholder = true;
                             String srv = m2.group(1);
-                            if (!serversToQuery.contains(srv)) serversToQuery.add(srv);
+                            serversToQuery.add(srv);
                             processedLine = processedLine.replace(m2.group(0), "<gray>...</gray>");
                         }
                         
-                        formattedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(processedLine).decoration(TextDecoration.ITALIC, false));
+                        formattedLore.add(plugin.getMiniMessage().deserialize(processedLine).decoration(TextDecoration.ITALIC, false));
                     }
                     meta.lore(formattedLore);
                     item.setItemMeta(meta);
 
                     inventory.setItem(slot, item);
+                    serverNamesBySlot.put(slot, serverName);
 
                     // If online placeholders are present, send requests
                     if (hasOnlinePlaceholder) {
-                        Player anyPlayer = Bukkit.getOnlinePlayers().stream().findFirst().orElse(null);
-                        if (anyPlayer != null) {
-                            for (String srv : serversToQuery) {
-                                addPendingOnlineRequest(srv, slot, inventory, anyPlayer, plugin, lore, name, type, serverName);
-                            }
+                        for (String srv : serversToQuery) {
+                            addPendingOnlineRequest(srv, slot, inventory, queryPlayer, plugin, lore, name, type, serverName);
                         }
                     }
                 }
             }
+        }
+
+        private String getServerName(int slot) {
+            return serverNamesBySlot.get(slot);
         }
 
         // Helper to update the lore of an item in the inventory
@@ -330,9 +351,9 @@ public class SelectorCommand implements CommandExecutor, Listener {
             List<net.kyori.adventure.text.Component> updatedLore = new ArrayList<>();
             for (String line : lore) {
                 if (line.contains("%online%")) {
-                    updatedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line.replace("%online%", onlineStatus)).decoration(TextDecoration.ITALIC, false));
+                    updatedLore.add(plugin.getMiniMessage().deserialize(line.replace("%online%", onlineStatus)).decoration(TextDecoration.ITALIC, false));
                 } else {
-                    updatedLore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line).decoration(TextDecoration.ITALIC, false));
+                    updatedLore.add(plugin.getMiniMessage().deserialize(line).decoration(TextDecoration.ITALIC, false));
                 }
             }
             meta.lore(updatedLore);
@@ -359,17 +380,10 @@ public class SelectorCommand implements CommandExecutor, Listener {
         ItemStack clickedItem = event.getCurrentItem();
         if (clickedItem != null && clickedItem.getType() != Material.AIR) {
             Player player = (Player) event.getWhoClicked();
-            ItemMeta meta = clickedItem.getItemMeta();
-            if (meta == null || !meta.hasDisplayName()) {
-                return;
-            }
-
-            // Fetch server name from configuration based on item identifier
-            String serverIdentifier = getServerIdentifier(clickedItem);
-            String serverName = plugin.getConfig().getString("server-selector.items." + serverIdentifier + ".server");
+            ServerSelectorGUI gui = (ServerSelectorGUI) clickedInventory.getHolder();
+            String serverName = gui.getServerName(event.getSlot());
 
             if (serverName == null) {
-                plugin.getLogger().warning("Server name not found for item: " + serverIdentifier);
                 return;
             }
 
@@ -379,34 +393,6 @@ public class SelectorCommand implements CommandExecutor, Listener {
             // Close the inventory after clicking
             player.closeInventory();
         }
-    }
-
-    // Helper method to get server identifier from clicked item
-    private String getServerIdentifier(ItemStack item) {
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null || !meta.hasDisplayName()) {
-            return null;
-        }
-
-        String displayName = meta.getDisplayName();
-        FileConfiguration config = plugin.getConfig();
-        ConfigurationSection itemsSection = config.getConfigurationSection("server-selector.items");
-
-        if (itemsSection == null) {
-            return null;
-        }
-
-        for (String key : itemsSection.getKeys(false)) {
-            ConfigurationSection itemSection = itemsSection.getConfigurationSection(key);
-            if (itemSection == null) continue;
-
-            String name = itemSection.getString("name");
-            if (name != null && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(name)).equals(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(meta.displayName()))) {
-                return key;
-            }
-        }
-
-        return null;
     }
 
     // Method to send the player to another server using BungeeCord

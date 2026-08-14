@@ -27,6 +27,7 @@ public class LabsLobbyCommand implements CommandExecutor {
             plugin.reloadConfig();
             plugin.loadConfig();
             plugin.loadSpawnLocation();
+            plugin.getItemManager().reload();
             plugin.reapplyLobbyItemsToAllPlayers();
             plugin.getNpcManager().reloadNpcConfig();
 
