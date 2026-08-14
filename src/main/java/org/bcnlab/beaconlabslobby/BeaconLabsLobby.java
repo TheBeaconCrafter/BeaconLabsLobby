@@ -42,6 +42,7 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
     private BuildManager buildManager;
     private ItemManager itemManager;
     private NPCManager npcManager;
+    private SelectorCommand selectorCommand;
     private MiniMessage miniMessage;
     private Location spawnLocation;
 
@@ -325,6 +326,14 @@ public final class BeaconLabsLobby extends JavaPlugin implements PluginMessageLi
 
     public NPCManager getNpcManager() {
         return npcManager;
+    }
+
+    public SelectorCommand getSelectorCommand() {
+        return selectorCommand;
+    }
+
+    public void setSelectorCommand(SelectorCommand selectorCommand) {
+        this.selectorCommand = selectorCommand;
     }
 
     public MiniMessage getMiniMessage() {

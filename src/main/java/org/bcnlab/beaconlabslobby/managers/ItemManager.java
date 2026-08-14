@@ -10,6 +10,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -25,6 +26,8 @@ public class ItemManager {
     private final NamespacedKey itemKey;
     private final MiniMessage miniMessage;
     private final Map<String, ItemStack> itemTemplates = new HashMap<>();
+    private int selectorSlot = -1;
+    private Material selectorMaterial;
 
     public ItemManager(BeaconLabsLobby plugin) {
         this.plugin = plugin;
@@ -44,6 +47,8 @@ public class ItemManager {
 
     public void reload() {
         itemTemplates.clear();
+        selectorSlot = -1;
+        selectorMaterial = null;
     }
 
     private void giveItem(Player player, FileConfiguration config, String configPath, String actionId) {
@@ -62,6 +67,10 @@ public class ItemManager {
         if (type == null) type = Material.STONE;
         List<String> lore = section.getStringList("lore");
         int slot = section.getInt("slot", 0);
+        if ("server-selector".equals(configPath)) {
+            selectorSlot = slot;
+            selectorMaterial = type;
+        }
 
         ItemStack item = itemTemplates.get(configPath);
         if (item == null) {
@@ -93,6 +102,45 @@ public class ItemManager {
     public String getActionId(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return null;
         return item.getItemMeta().getPersistentDataContainer().get(itemKey, PersistentDataType.STRING);
+    }
+
+    /**
+     * Resolves an interaction item, including the short window where the client can
+     * send a stale or metadata-less copy immediately after joining.
+     */
+    public String getActionId(Player player, EquipmentSlot hand, ItemStack eventItem) {
+        // Compatibility layers and proxies can provide a stale/empty event stack
+        // while the server already has the correct item in the player's inventory.
+        // Resolve the event stack first, then always fall back to the authoritative
+        // server-side stack rather than trusting the client copy.
+        EquipmentSlot effectiveHand = hand == EquipmentSlot.OFF_HAND
+                ? EquipmentSlot.OFF_HAND
+                : EquipmentSlot.HAND;
+        ItemStack liveItem = effectiveHand == EquipmentSlot.OFF_HAND
+                ? player.getInventory().getItemInOffHand()
+                : player.getInventory().getItemInMainHand();
+        ItemStack mainHandItem = player.getInventory().getItemInMainHand();
+
+        // Resolve the selector from the server-side slot/material before reading the
+        // packet item. This remains reliable when the proxy sends an empty or stale
+        // item stack during the initial inventory synchronization.
+        if (selectorSlot >= 0
+                && selectorMaterial != null
+                && player.getInventory().getHeldItemSlot() == selectorSlot
+                && ((mainHandItem != null && mainHandItem.getType() == selectorMaterial)
+                || (liveItem != null && liveItem.getType() == selectorMaterial)
+                || (eventItem != null && eventItem.getType() == selectorMaterial))) {
+            return "selector";
+        }
+
+        String actionId = getActionId(eventItem);
+        if (actionId == null && eventItem != liveItem) {
+            actionId = getActionId(liveItem);
+        }
+        if (actionId == null && mainHandItem != liveItem) {
+            actionId = getActionId(mainHandItem);
+        }
+        return actionId;
     }
 
     private Component parseText(String text) {

@@ -14,7 +14,9 @@ import java.util.List;
 public class CommandRegistry {
 
     public static void registerAll(BeaconLabsLobby plugin, Commands commands) {
-        registerLegacyCommand(commands, "selector", "Opens the server selector", List.of(), new SelectorCommand(plugin));
+        SelectorCommand selectorCommand = new SelectorCommand(plugin);
+        plugin.setSelectorCommand(selectorCommand);
+        registerLegacyCommand(commands, "selector", "Opens the server selector", List.of(), selectorCommand);
         registerLegacyCommand(commands, "privateselector", "Opens the private server selector", List.of(), new PrivateSelectorCommand(plugin));
         registerLegacyCommand(commands, "labslobby", "Returns basic plugin information", List.of(), new LabsLobbyCommand(plugin));
         registerLegacyCommand(commands, "build", "Toggles build mode", List.of("b"), new BuildCommand(plugin, plugin.getBuildManager()));

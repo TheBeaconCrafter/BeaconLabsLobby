@@ -2,6 +2,7 @@ package org.bcnlab.beaconlabslobby.listeners;
 import org.bcnlab.beaconlabslobby.utils.SoundUtil;
 
 import org.bcnlab.beaconlabslobby.BeaconLabsLobby;
+import org.bcnlab.beaconlabslobby.commands.SelectorCommand;
 import org.bcnlab.beaconlabslobby.utils.ScoreboardUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
@@ -11,6 +12,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -38,6 +40,10 @@ public class PlayerJoinListener implements Listener {
 
         // Give configurable items on join via ItemManager (it clears the inventory once).
         plugin.getItemManager().giveJoinItems(player);
+        // Proxies/compatibility layers can finish sending the join inventory after
+        // PlayerJoinEvent. Resync across that short window rather than relying on a
+        // single next-tick packet.
+        resyncInventoryAfterJoin(player);
 
         //Scoreboard - Delay by 10 ticks (500ms) to allow ViaVersion plugin messages and LuckPerms API to fully load the user
         org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -59,6 +65,17 @@ public class PlayerJoinListener implements Listener {
 
     }
 
+    private void resyncInventoryAfterJoin(Player player) {
+        long[] delays = {1L, 20L, 60L};
+        for (long delay : delays) {
+            org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (player.isOnline()) {
+                    player.updateInventory();
+                }
+            }, delay);
+        }
+    }
+
     private void teleportPlayerToSpawn(Player player) {
         try {
             Location spawnLocation = plugin.getSpawnLocation();
@@ -73,10 +90,9 @@ public class PlayerJoinListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        ItemStack item = event.getItem();
-        String actionId = plugin.getItemManager().getActionId(item);
+        String actionId = plugin.getItemManager().getActionId(event.getPlayer(), event.getHand(), event.getItem());
         
         if (actionId != null) {
             event.setCancelled(true);
@@ -87,7 +103,14 @@ public class PlayerJoinListener implements Listener {
             
             switch (actionId) {
                 case "selector":
-                    player.performCommand("selector");
+                    SelectorCommand selectorCommand = plugin.getSelectorCommand();
+                    if (selectorCommand != null) {
+                        // Open directly so the hotbar action does not depend on a
+                        // second command dispatch during proxy/server connection.
+                        selectorCommand.openSelectorGUI(player);
+                    } else {
+                        player.performCommand("selector");
+                    }
                     break;
                 case "privateselector":
                     player.performCommand("privateselector");
